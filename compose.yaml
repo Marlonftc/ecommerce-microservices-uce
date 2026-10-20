@@ -1,5 +1,50 @@
 # Docker Compose - ecommerce-microservices-uce
-# Services will be added one by one during Phase 4.
 name: ecommerce-uce
 
-services: {}
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      # Superuser: used only by the init script, never by the services
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      # Variables read by infra/postgres/init/01-init-databases.sh
+      USER_DB_NAME: ${USER_DB_NAME:?set in .env}
+      USER_DB_USER: ${USER_DB_USER:?set in .env}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:?set in .env}
+      PRODUCT_DB_NAME: ${PRODUCT_DB_NAME:?set in .env}
+      PRODUCT_DB_USER: ${PRODUCT_DB_USER:?set in .env}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?set in .env}
+      INVENTORY_DB_NAME: ${INVENTORY_DB_NAME:?set in .env}
+      INVENTORY_DB_USER: ${INVENTORY_DB_USER:?set in .env}
+      INVENTORY_DB_PASSWORD: ${INVENTORY_DB_PASSWORD:?set in .env}
+      ORDER_DB_NAME: ${ORDER_DB_NAME:?set in .env}
+      ORDER_DB_USER: ${ORDER_DB_USER:?set in .env}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?set in .env}
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME:?set in .env}
+      PAYMENT_DB_USER: ${PAYMENT_DB_USER:?set in .env}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?set in .env}
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:?set in .env}
+      NOTIFICATION_DB_USER: ${NOTIFICATION_DB_USER:?set in .env}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?set in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - data-net
+    # No "ports": the database is not reachable from the host machine
+
+networks:
+  # Internal network: no access to the outside, only services and the database
+  data-net:
+    internal: true
+
+volumes:
+  postgres-data:
