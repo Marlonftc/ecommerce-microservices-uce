@@ -1,0 +1,5 @@
+# Docker Compose - ecommerce-microservices-uce
+# Services will be added one by one during Phase 4.
+name: ecommerce-uce
+
+services: {}
