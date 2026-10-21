@@ -8,3 +8,8 @@ services:
     networks:
       # data-net is internal, so a normal network is needed to publish the port
       - default
+
+  user-service:
+    ports:
+      # Temporary access to Swagger until the gateway exists
+      - "127.0.0.1:8001:8000"

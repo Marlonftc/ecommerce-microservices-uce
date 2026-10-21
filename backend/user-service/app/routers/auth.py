@@ -9,7 +9,8 @@ from app.tokens import create_access_token
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED,
+             responses={409: {"description": "Email already registered"}})
 def register(data: RegisterRequest, db: DbSession):
     try:
         return user_service.register_user(db, data)
@@ -17,7 +18,8 @@ def register(data: RegisterRequest, db: DbSession):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse,
+             responses={401: {"description": "Invalid credentials"}})
 def login(data: LoginRequest, db: DbSession):
     try:
         user = user_service.authenticate(db, data.email, data.password)
