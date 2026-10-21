@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     db_user: str = "user_svc"
     db_password: str
 
+    # JWT (RS256). Inside Docker the keys are mounted as Compose secrets.
+    jwt_private_key_path: str = "/run/secrets/jwt_private_key"
+    jwt_public_key_path: str = "/run/secrets/jwt_public_key"
+    jwt_algorithm: str = "RS256"
+    jwt_issuer: str = "user-service"
+    jwt_audience: str = "ecommerce-uce"
+    jwt_expire_minutes: int = 60
+
     # Initial administrator, created by app/seed.py
     admin_email: str | None = None
     admin_password: str | None = None
