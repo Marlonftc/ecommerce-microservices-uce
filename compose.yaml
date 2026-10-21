@@ -85,6 +85,45 @@ services:
       - ecommerce-net
       - data-net
 
+  # ---------- product-service ----------
+  # One-shot job: applies migrations and loads the initial catalog, then exits.
+  product-migrate:
+    build: ./backend/product-service
+    image: ecommerce-uce/product-service
+    command: ["sh", "-c", "alembic upgrade head && python -m app.seed"]
+    restart: "no"
+    environment:
+      DB_NAME: ${PRODUCT_DB_NAME:?set in .env}
+      DB_USER: ${PRODUCT_DB_USER:?set in .env}
+      DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?set in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - data-net
+
+  product-service:
+    build: ./backend/product-service
+    image: ecommerce-uce/product-service
+    restart: always
+    environment:
+      DB_NAME: ${PRODUCT_DB_NAME:?set in .env}
+      DB_USER: ${PRODUCT_DB_USER:?set in .env}
+      DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?set in .env}
+      JWT_ISSUER: ${JWT_ISSUER:-user-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-ecommerce-uce}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    secrets:
+      - jwt_public_key  # only the public key: it verifies tokens, never issues them
+    depends_on:
+      postgres:
+        condition: service_healthy
+      product-migrate:
+        condition: service_completed_successfully
+    networks:
+      - ecommerce-net
+      - data-net
+
 networks:
   # Gateway and microservices
   ecommerce-net:
