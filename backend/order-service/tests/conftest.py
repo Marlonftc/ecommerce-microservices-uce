@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -125,38 +126,116 @@ def db_session():
 
 
 class FakeInventory:
-    """Answers POST /internal/reservations like inventory-service.
+    """Answers the internal reservation endpoints like inventory-service.
 
-    mode: "ok", "down", "timeout", "insufficient" (product 1), "released".
+    mode (reserve): "ok", "down", "timeout", "insufficient", "released".
+    confirm_mode / release_mode: "ok" or "down".
     on_reserve: optional function called before answering (to simulate a race).
     """
 
     def __init__(self):
         self.mode = "ok"
+        self.confirm_mode = "ok"
+        self.release_mode = "ok"
         self.reserved: dict[str, list] = {}
+        self.status: dict[str, str] = {}
         self.calls = 0
+        self.reserve_calls = 0
         self.on_reserve = None
+
+    @staticmethod
+    def _answer(code, order_id, status, items):
+        return httpx2.Response(code, json={"order_id": order_id, "status": status, "items": items})
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
         self.calls += 1
-        body = json.loads(request.content) if request.content else {}
+        path = request.url.path
+        if path.endswith("/confirm") or path.endswith("/release"):
+            order_id = path.split("/")[-2]
+            action = path.rsplit("/", 1)[1]
+            if (self.confirm_mode if action == "confirm" else self.release_mode) == "down":
+                raise httpx2.ConnectError("inventory-service down")
+            current = self.status.get(order_id)
+            if action == "confirm":
+                if current is None:
+                    return httpx2.Response(404, json={"detail": "Reservation not found"})
+                if current == "RELEASED":
+                    return httpx2.Response(409, json={"detail": {"code": "INVALID_TRANSITION", "message": "x"}})
+                self.status[order_id] = "CONFIRMED"
+            else:
+                if current == "CONFIRMED":
+                    return httpx2.Response(409, json={"detail": {"code": "INVALID_TRANSITION", "message": "x"}})
+                self.status[order_id] = "RELEASED"  # unknown order: tombstone
+            return self._answer(200, order_id, self.status[order_id], self.reserved.get(order_id, []))
+
+        self.reserve_calls += 1
+        body = json.loads(request.content)
         if self.on_reserve:
             self.on_reserve(body)
         if self.mode == "down":
             raise httpx2.ConnectError("inventory-service down")
+        if self.status.get(body["order_id"]) == "RELEASED" or self.mode == "released":
+            return httpx2.Response(409, json={"detail": {"code": "RESERVATION_RELEASED", "message": "x"}})
         if self.mode == "timeout":
-            # inventory reserved it, but the answer was lost
             self.reserved[body["order_id"]] = body["items"]
+            self.status[body["order_id"]] = "RESERVED"
             raise httpx2.ReadTimeout("no answer")
         if self.mode == "insufficient":
             return httpx2.Response(409, json={"detail": {"code": "INSUFFICIENT_STOCK", "message": "x",
                                                          "product_id": body["items"][0]["product_id"]}})
-        if self.mode == "released":
-            return httpx2.Response(409, json={"detail": {"code": "RESERVATION_RELEASED", "message": "x"}})
         created = body["order_id"] not in self.reserved
         self.reserved[body["order_id"]] = body["items"]
-        return httpx2.Response(201 if created else 200,
-                               json={"order_id": body["order_id"], "status": "RESERVED", "items": body["items"]})
+        self.status[body["order_id"]] = "RESERVED"
+        return self._answer(201 if created else 200, body["order_id"], "RESERVED", body["items"])
+
+
+class FakePayments:
+    """Answers POST /internal/payments like payment-service: one payment per
+    order, the stored result for a repeated key. mode: "ok", "down", "slow"
+    (stored APPROVED but the answer is lost), "conflict"."""
+
+    def __init__(self):
+        self.mode = "ok"
+        self.payments: dict[str, dict] = {}
+        self.requests: list[dict] = []
+        self.on_call = None
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        if self.on_call:
+            self.on_call()
+        body = json.loads(request.content)
+        self.requests.append({"body": body, "key": request.headers["Idempotency-Key"]})
+        if self.mode == "down":
+            raise httpx2.ConnectError("payment-service down")
+        if self.mode == "conflict":
+            return httpx2.Response(409, json={"detail": {"code": "IDEMPOTENCY_KEY_REUSED", "message": "x"}})
+        order_id = body["order_id"]
+        created = order_id not in self.payments
+        if created:
+            status = "REJECTED" if body["simulation"] == "REJECT" else "APPROVED"
+            self.payments[order_id] = {"id": str(uuid.uuid4()), "order_id": order_id, "status": status,
+                                       "amount": body["amount"], "currency": body["currency"],
+                                       "simulation": body["simulation"]}
+            if body["simulation"] == "SLOW_APPROVE" or self.mode == "slow":
+                # APPROVED is stored first; the answer arrives after the client gave up
+                raise httpx2.ReadTimeout("payment-service is slow")
+        return httpx2.Response(201 if created else 200, json=self.payments[order_id])
+
+
+class FakeNotifications:
+    """Answers POST /internal/notifications. mode: "ok" or "down"."""
+
+    def __init__(self):
+        self.mode = "ok"
+        self.events: dict[str, dict] = {}
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        if self.mode == "down":
+            raise httpx2.ConnectError("notification-service down")
+        body = json.loads(request.content)
+        created = body["event_id"] not in self.events
+        self.events.setdefault(body["event_id"], body)
+        return httpx2.Response(201 if created else 200, json={"id": str(uuid.uuid4())})
 
 
 @pytest.fixture
@@ -169,7 +248,25 @@ def inventory(monkeypatch):
 
 
 @pytest.fixture
-def client(db_session, catalog, inventory):
+def payments(monkeypatch):
+    from app.clients import payment_client
+
+    fake = FakePayments()
+    monkeypatch.setattr(payment_client.client, "transport", httpx2.MockTransport(fake))
+    return fake
+
+
+@pytest.fixture
+def notifications(monkeypatch):
+    from app.clients import notification_client
+
+    fake = FakeNotifications()
+    monkeypatch.setattr(notification_client.client, "transport", httpx2.MockTransport(fake))
+    return fake
+
+
+@pytest.fixture
+def client(db_session, catalog, inventory, payments, notifications):
     """HTTP client using the rollback session and the fake catalogue."""
     from fastapi.testclient import TestClient
 

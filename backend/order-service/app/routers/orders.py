@@ -8,7 +8,8 @@ from app.clients import inventory_client
 from app.clients.base import ServiceUnavailable, UnexpectedResponse
 from app.dependencies import CurrentUser, DbSession
 from app.models import Order
-from app.schemas import CheckoutIn, OrderOut, OrderPage
+from app.schemas import CheckoutIn, OrderOut, OrderPage, PaymentIn
+from app.services import executor, payment_flow
 from app.services import order_service as os_
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -65,6 +66,10 @@ def create_order(data: CheckoutIn, db: DbSession, user: CurrentUser, response: R
         raise HTTPException(status_code=502, detail="inventory-service has a different reservation for this order")
 
     order = result.order
+    if order.status == "CANCELLED":
+        # Run the RELEASE_INVENTORY saved with the cancellation; if inventory
+        # does not answer it stays pending for a later retry
+        executor.run_order_operations(db, order.id)
     out = _out(db, order)
     if result.insufficient_product is not None:
         raise _conflict("INSUFFICIENT_STOCK", "Not enough units", product_id=result.insufficient_product,
@@ -94,4 +99,33 @@ def read_order(order_id: uuid.UUID, db: DbSession, user: CurrentUser):
     except os_.OrderNotFound:
         # Same answer when it does not exist and when it belongs to someone else
         raise HTTPException(status_code=404, detail="Order not found")
+    return _out(db, order)
+
+
+@router.post(
+    "/{order_id}/pay",
+    response_model=OrderOut,
+    responses={
+        **AUTH,
+        200: {"description": "Final result: PAID or PAYMENT_REJECTED"},
+        202: {"description": "PAYMENT_PENDING: no definitive answer yet. Repeat the request with "
+                             "the same Idempotency-Key, or read GET /orders/{id}"},
+        404: {"description": "Order not found"},
+        409: {"description": "IDEMPOTENCY_KEY_REUSED or ORDER_NOT_PAYABLE"},
+    },
+)
+def pay_order(order_id: uuid.UUID, data: PaymentIn, db: DbSession, user: CurrentUser, response: Response,
+              idempotency_key: Annotated[str, Header(min_length=1, max_length=100)]):
+    """Owner only, also for admins."""
+    try:
+        order = payment_flow.pay(db, user.id, order_id, idempotency_key, data.simulation)
+    except os_.OrderNotFound:
+        raise HTTPException(status_code=404, detail="Order not found")
+    except payment_flow.IdempotencyKeyReused:
+        raise _conflict("IDEMPOTENCY_KEY_REUSED",
+                        "The payment of this order was started with another key or mode")
+    except payment_flow.OrderNotPayable as exc:
+        raise _conflict("ORDER_NOT_PAYABLE", "This order cannot be paid", status=exc.status)
+    if order.status == "PAYMENT_PENDING":
+        response.status_code = status.HTTP_202_ACCEPTED
     return _out(db, order)

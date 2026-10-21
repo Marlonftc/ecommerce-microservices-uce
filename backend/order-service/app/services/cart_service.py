@@ -118,3 +118,11 @@ def remove_item(db: Session, user_id: int, product_id: int,
 
 def clear(db: Session, user_id: int, expected_version: int | None = None) -> CartView:
     return _modify(db, user_id, expected_version, lambda items: {})
+
+
+def empty_locked_cart(db: Session, user_id: int) -> None:
+    """Empties a cart whose row the caller already locked (payment approved).
+    Runs inside the caller's transaction; the version grows only if items existed."""
+    removed = db.execute(delete(CartItem).where(CartItem.user_id == user_id)).rowcount
+    if removed:
+        db.execute(update(Cart).where(Cart.user_id == user_id).values(version=Cart.version + 1))

@@ -218,8 +218,10 @@ def test_insufficient_stock_cancels_and_records_the_release(client, inventory, d
     assert (order["status"], order["cancel_reason"], order["inventory_status"]) == (
         "CANCELLED", "INSUFFICIENT_STOCK", "NOT_RESERVED")
     # No orphan reservation is possible: the release is saved with the cancellation
+    # and run right away (inventory leaves a tombstone that rejects a late reservation)
     assert operations(db_session, detail["order_id"]) == [
-        ("RELEASE_INVENTORY", f"{detail['order_id']}:RELEASE_INVENTORY", "PENDING")]
+        ("RELEASE_INVENTORY", f"{detail['order_id']}:RELEASE_INVENTORY", "DONE")]
+    assert inventory.status[detail["order_id"]] == "RELEASED"
 
 
 def test_after_insufficient_stock_the_cart_is_unlocked(client, inventory):
@@ -311,8 +313,11 @@ def test_late_reservation_does_not_reactivate_a_cancelled_order(client, inventor
     again = checkout(client, version, key="buy-1")
 
     assert again.json()["status"] == "CANCELLED"  # not reactivated
-    assert inventory.calls == 1  # a cancelled order is not reserved again
-    assert operations(db_session, first["id"])[0][0] == "RELEASE_INVENTORY"
+    assert inventory.reserve_calls == 1  # a cancelled order is not reserved again
+    # The release saved with the cancellation frees the late reservation
+    assert operations(db_session, first["id"])[0][::2] == ("RELEASE_INVENTORY", "DONE")
+    assert inventory.status[first["id"]] == "RELEASED"
+    assert again.json()["inventory_status"] == "RELEASED"
 
 
 # 11. Queries and authorization ---------------------------------------------------------------

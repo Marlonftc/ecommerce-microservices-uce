@@ -3,10 +3,11 @@
 Every failure ends in one of three groups, so order-service can decide
 what to do without looking at HTTP details:
 
-  ServiceUnavailable  transient: timeout, connection error, 5xx. Retry later.
+  ServiceUnavailable  transient: timeout, connection error, 408, 429, 5xx. Retry later.
   Conflict            business answer (409) with a code. Decide by the code.
-  UnexpectedResponse  permanent: 403, 422 or a body that breaks the contract.
-                      Retrying will not help; it means a configuration or code error.
+  UnexpectedResponse  permanent: 400/422 (contract) or 401/403 (internal key or
+                      configuration) or a body that breaks the contract.
+                      Retrying will not help; it needs to be reviewed.
 """
 import logging
 from typing import Any
@@ -92,7 +93,8 @@ class ServiceClient:
             except httpx2.TransportError as exc:
                 raise ServiceUnavailable(self.name, f"transport error: {exc}", request_sent=True)
 
-        if response.status_code >= 500:
+        # 5xx, 408 (request timeout) and 429 (too many requests): try again later
+        if response.status_code >= 500 or response.status_code in (408, 429):
             raise ServiceUnavailable(self.name, f"status {response.status_code}", request_sent=True)
         return response
 

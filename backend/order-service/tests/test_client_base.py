@@ -65,7 +65,7 @@ def test_connect_timeout_is_not_retried(fake):
     assert error.value.request_sent is False
 
 
-@pytest.mark.parametrize("status", [500, 502, 503])
+@pytest.mark.parametrize("status", [408, 429, 500, 502, 503])
 def test_server_errors_are_transient(fake, status):
     fake(inventory_client, (status, {"detail": "error"}))
 
@@ -73,7 +73,7 @@ def test_server_errors_are_transient(fake, status):
         inventory_client.release(uuid.uuid4())
 
 
-@pytest.mark.parametrize("status", [403, 422])
+@pytest.mark.parametrize("status", [400, 401, 403, 422])
 def test_client_errors_are_permanent(fake, status):
     # A wrong internal key or a body the other service rejects: a configuration or code error
     fake(inventory_client, (status, {"detail": "error"}))

@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -78,3 +80,10 @@ class OrderPage(BaseModel):
     total: int = Field(description="Orders matching the filters, in all pages")
     page: int
     size: int
+
+
+class PaymentIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # Simulated payment: no card data exists in this system
+    simulation: Literal["APPROVE", "REJECT", "SLOW_APPROVE"] = "APPROVE"
