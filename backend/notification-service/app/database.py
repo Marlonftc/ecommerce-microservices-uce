@@ -3,13 +3,13 @@ from collections.abc import Iterator
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from app.config import settings
+from app.db_config import db_settings
 
 # The engine manages a pool of connections to PostgreSQL.
 # pool_pre_ping checks each connection before using it, so the service
 # recovers by itself after the database restarts.
 engine = create_engine(
-    settings.database_url,
+    db_settings.database_url,
     pool_size=5,
     max_overflow=5,
     pool_pre_ping=True,

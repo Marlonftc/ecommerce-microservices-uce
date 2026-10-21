@@ -13,6 +13,11 @@ def count(db_session, event_id):
                              .where(Notification.event_id == event_id))
 
 
+def total(db_session):
+    # The table may already hold real data: tests compare before and after
+    return db_session.scalar(select(func.count()).select_from(Notification))
+
+
 # --- Registration and idempotency ---------------------------------------------
 
 def test_new_event_creates_an_unread_notification(client):
@@ -108,9 +113,10 @@ def test_cancelled_order_with_and_without_amount(client):
 ])
 def test_invalid_events_are_rejected(client, db_session, changes):
     body = {**event_body(), **changes}
+    before = total(db_session)
 
     assert send(client, body).status_code == 422
-    assert db_session.scalar(select(func.count()).select_from(Notification)) == 0
+    assert total(db_session) == before
 
 
 def test_event_id_must_match_the_type(client):
@@ -141,10 +147,12 @@ def test_json_number_amount_is_kept_exact(client):
     {"X-Internal-Key": ""},
 ])
 def test_internal_key_is_required(client, db_session, headers):
+    before = total(db_session)
+
     response = send(client, event_body(), headers=headers)
 
     assert response.status_code == 403
-    assert db_session.scalar(select(func.count()).select_from(Notification)) == 0
+    assert total(db_session) == before
 
 
 def test_a_user_token_is_not_an_internal_key(client):

@@ -219,6 +219,46 @@ services:
       - ecommerce-net
       - data-net
 
+  notification-migrate:
+    build: ./backend/notification-service
+    image: ecommerce-uce/notification-service
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    environment:
+      # Database only: the migrations need no JWT key and no internal key
+      DB_NAME: ${NOTIFICATION_DB_NAME:?set in .env}
+      DB_USER: ${NOTIFICATION_DB_USER:?set in .env}
+      DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?set in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - data-net
+
+  notification-service:
+    build: ./backend/notification-service
+    image: ecommerce-uce/notification-service
+    restart: always
+    environment:
+      DB_NAME: ${NOTIFICATION_DB_NAME:?set in .env}
+      DB_USER: ${NOTIFICATION_DB_USER:?set in .env}
+      DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?set in .env}
+      JWT_ISSUER: ${JWT_ISSUER:-user-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-ecommerce-uce}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set in .env}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    secrets:
+      - jwt_public_key
+    # Does not depend on order-service: it only receives calls
+    depends_on:
+      postgres:
+        condition: service_healthy
+      notification-migrate:
+        condition: service_completed_successfully
+    networks:
+      - ecommerce-net
+      - data-net
+
 networks:
   # Gateway and microservices
   ecommerce-net:
