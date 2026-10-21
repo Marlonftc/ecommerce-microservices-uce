@@ -24,3 +24,8 @@ services:
     ports:
       # Temporary access to Swagger until the gateway exists
       - "127.0.0.1:8003:8000"
+
+  payment-service:
+    ports:
+      # Temporary access to Swagger until the gateway exists
+      - "127.0.0.1:8004:8000"
