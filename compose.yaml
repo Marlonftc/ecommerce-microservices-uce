@@ -1,0 +1,104 @@
+# Docker Compose - ecommerce-microservices-uce
+name: ecommerce-uce
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      # Superuser: used only by the init script, never by the services
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      # Variables read by infra/postgres/init/01-init-databases.sh
+      USER_DB_NAME: ${USER_DB_NAME:?set in .env}
+      USER_DB_USER: ${USER_DB_USER:?set in .env}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:?set in .env}
+      PRODUCT_DB_NAME: ${PRODUCT_DB_NAME:?set in .env}
+      PRODUCT_DB_USER: ${PRODUCT_DB_USER:?set in .env}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?set in .env}
+      INVENTORY_DB_NAME: ${INVENTORY_DB_NAME:?set in .env}
+      INVENTORY_DB_USER: ${INVENTORY_DB_USER:?set in .env}
+      INVENTORY_DB_PASSWORD: ${INVENTORY_DB_PASSWORD:?set in .env}
+      ORDER_DB_NAME: ${ORDER_DB_NAME:?set in .env}
+      ORDER_DB_USER: ${ORDER_DB_USER:?set in .env}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?set in .env}
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME:?set in .env}
+      PAYMENT_DB_USER: ${PAYMENT_DB_USER:?set in .env}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?set in .env}
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:?set in .env}
+      NOTIFICATION_DB_USER: ${NOTIFICATION_DB_USER:?set in .env}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?set in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - data-net
+    # No "ports": the database is not reachable from the host machine
+
+  # ---------- user-service ----------
+  # One-shot job: applies migrations and creates the admin, then exits.
+  user-migrate:
+    build: ./backend/user-service
+    image: ecommerce-uce/user-service
+    command: ["sh", "-c", "alembic upgrade head && python -m app.seed"]
+    restart: "no"
+    environment:
+      DB_NAME: ${USER_DB_NAME:?set in .env}
+      DB_USER: ${USER_DB_USER:?set in .env}
+      DB_PASSWORD: ${USER_DB_PASSWORD:?set in .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set in .env}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - data-net
+
+  user-service:
+    build: ./backend/user-service
+    image: ecommerce-uce/user-service
+    restart: always
+    environment:
+      DB_NAME: ${USER_DB_NAME:?set in .env}
+      DB_USER: ${USER_DB_USER:?set in .env}
+      DB_PASSWORD: ${USER_DB_PASSWORD:?set in .env}
+      JWT_ISSUER: ${JWT_ISSUER:-user-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-ecommerce-uce}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-migrate:
+        condition: service_completed_successfully
+    networks:
+      - ecommerce-net
+      - data-net
+
+networks:
+  # Gateway and microservices
+  ecommerce-net:
+  # Internal network: no access to the outside, only services and the database
+  data-net:
+    internal: true
+
+volumes:
+  postgres-data:
+
+secrets:
+  # Generated with: python infra/jwt/generate_keys.py
+  # Mounted inside the containers at /run/secrets/<name>
+  jwt_private_key:
+    file: ./secrets/jwt_private.pem
+  jwt_public_key:
+    file: ./secrets/jwt_public.pem

@@ -1,32 +1,55 @@
-
 # E-Commerce Microservices UCE
 
-## Examen Complexivo - Universidad Central del Ecuador
+Plataforma de comercio electrónico basada en microservicios y Docker.
 
-**Caso 1:** Plataforma de comercio electrónico basada en microservicios y Docker.
+Universidad Central del Ecuador - Carrera de Sistemas de Información
+Autor: Julio César Mendoza Tello
 
-### Objetivo
+## Descripción
 
-Desarrollar una plataforma de comercio electrónico utilizando una arquitectura de microservicios contenerizados, aplicando principios de separación de responsabilidades, comunicación entre servicios, persistencia, escalabilidad y resiliencia.
+La plataforma separa las funciones de una tienda en línea en seis microservicios independientes, cada uno con su propia base de datos, que se comunican mediante APIs REST dentro de una red Docker.
 
-### Tecnologías
+| Servicio | Responsabilidad |
+|---|---|
+| user-service | Registro, inicio de sesión y roles |
+| product-service | Catálogo de productos |
+| inventory-service | Existencias y reservas |
+| order-service | Carrito y pedidos |
+| payment-service | Pagos simulados |
+| notification-service | Notificaciones |
 
-- Python + FastAPI
-- PostgreSQL
-- React + Vite
-- Docker y Docker Compose
-- Nginx
-- Git y GitHub
+Además se incluyen un API Gateway (Nginx), un frontend (React) y PostgreSQL.
 
-### Microservicios
+## Tecnologías
 
-1. user-service
-2. product-service
-3. inventory-service
-4. order-service
-5. payment-service
-6. notification-service
+Python 3.12, FastAPI, SQLAlchemy, Alembic, PostgreSQL 16, Nginx, React, Docker y Docker Compose.
 
-### Estado del proyecto
+## Estructura
 
-En desarrollo: configuración inicial del entorno.
+```text
+backend/      microservicios
+frontend/     aplicación web
+gateway/      configuración de Nginx
+infra/        inicialización de PostgreSQL
+tests/        pruebas de integración y carga
+docs/         documentación
+compose.yaml
+.env.example
+```
+
+## Requisitos
+
+- Docker Desktop con WSL 2
+- Git
+
+## Ejecución
+
+Pendiente.
+
+## Limitaciones
+
+- Mientras un pedido está en proceso de compra, el carrito no se puede modificar. Si el pago se aprueba, el carrito se vacía; si se rechaza o se cancela el pedido, se conserva.
+- Se usa una sola instancia de PostgreSQL con una base de datos y un usuario por servicio, por lo que el aislamiento es lógico y no físico.
+- Los pagos y las notificaciones son simulados.
+
+Las decisiones de diseño están en [docs/architecture/decisiones.md](docs/architecture/decisiones.md).
