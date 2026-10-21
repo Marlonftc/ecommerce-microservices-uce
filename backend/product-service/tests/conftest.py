@@ -12,6 +12,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 if not Path(".env").exists():
     os.environ.setdefault("DB_PASSWORD", "test-password")
 
+# Fixed internal key for the tests (overrides the value of a local .env)
+os.environ["INTERNAL_API_KEY"] = "test-internal-key"
+
 # Temporary key pair. The private key only exists here, to simulate tokens
 # issued by user-service; product-service itself only receives the public key.
 _keys_dir = Path(tempfile.mkdtemp())

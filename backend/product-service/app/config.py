@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     jwt_issuer: str = "user-service"
     jwt_audience: str = "ecommerce-uce"
 
+    # Shared key required by /internal endpoints (called by other services)
+    internal_api_key: str
+
     @property
     def database_url(self) -> URL:
         # URL.create escapes special characters in the password
