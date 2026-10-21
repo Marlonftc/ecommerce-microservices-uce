@@ -1,5 +1,10 @@
-# Local development only. Copy to "compose.override.yaml" (ignored by Git).
-# Docker Compose merges it automatically with compose.yaml.
+# Local development only: publishes ports on 127.0.0.1 (this PC only).
+# compose.yaml never publishes service ports.
+#
+# Load it explicitly:
+#   docker compose -f compose.yaml -f compose.override.example.yaml up -d
+# Or copy it to "compose.override.yaml" (ignored by Git), which Compose
+# merges automatically with compose.yaml.
 services:
   postgres:
     ports:
@@ -24,3 +29,13 @@ services:
     ports:
       # Temporary access to Swagger until the gateway exists
       - "127.0.0.1:8003:8000"
+
+  payment-service:
+    ports:
+      # Temporary access to Swagger until the gateway exists
+      - "127.0.0.1:8004:8000"
+
+  notification-service:
+    ports:
+      # Temporary access to Swagger until the gateway exists
+      - "127.0.0.1:8005:8000"
