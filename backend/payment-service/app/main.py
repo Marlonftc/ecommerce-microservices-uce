@@ -5,11 +5,14 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import check_database
+from app.routers import internal, payments
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(settings.service_name)
 
 app = FastAPI(title=settings.service_name, version="1.0.0")
+app.include_router(payments.router)
+app.include_router(internal.router)
 
 if not settings.payment_simulation_enabled:
     logger.warning("payment simulation is disabled: payments will be refused with 503")
