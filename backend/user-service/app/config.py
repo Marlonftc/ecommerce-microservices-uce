@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "RS256"
     jwt_issuer: str = "user-service"
     jwt_audience: str = "ecommerce-uce"
-    jwt_expire_minutes: int = 60
+    jwt_expire_minutes: int = 30
 
     # Initial administrator, created by app/seed.py
     admin_email: str | None = None

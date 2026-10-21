@@ -71,7 +71,7 @@ services:
       DB_PASSWORD: ${USER_DB_PASSWORD:?set in .env}
       JWT_ISSUER: ${JWT_ISSUER:-user-service}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-ecommerce-uce}
-      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-30}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     secrets:
       - jwt_private_key
