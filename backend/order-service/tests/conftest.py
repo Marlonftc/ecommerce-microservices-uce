@@ -45,9 +45,12 @@ class FakeCatalog:
         self.prices = dict(prices)
         self.down = False
         self.calls = 0
+        self.on_call = None  # optional function run before answering (to simulate a race)
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
         self.calls += 1
+        if self.on_call:
+            self.on_call()
         if self.down:
             raise httpx2.ConnectError("product-service down")
         ids = [int(i) for i in request.url.params["ids"].split(",")]
@@ -121,8 +124,52 @@ def db_session():
     connection.close()
 
 
+class FakeInventory:
+    """Answers POST /internal/reservations like inventory-service.
+
+    mode: "ok", "down", "timeout", "insufficient" (product 1), "released".
+    on_reserve: optional function called before answering (to simulate a race).
+    """
+
+    def __init__(self):
+        self.mode = "ok"
+        self.reserved: dict[str, list] = {}
+        self.calls = 0
+        self.on_reserve = None
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        self.calls += 1
+        body = json.loads(request.content) if request.content else {}
+        if self.on_reserve:
+            self.on_reserve(body)
+        if self.mode == "down":
+            raise httpx2.ConnectError("inventory-service down")
+        if self.mode == "timeout":
+            # inventory reserved it, but the answer was lost
+            self.reserved[body["order_id"]] = body["items"]
+            raise httpx2.ReadTimeout("no answer")
+        if self.mode == "insufficient":
+            return httpx2.Response(409, json={"detail": {"code": "INSUFFICIENT_STOCK", "message": "x",
+                                                         "product_id": body["items"][0]["product_id"]}})
+        if self.mode == "released":
+            return httpx2.Response(409, json={"detail": {"code": "RESERVATION_RELEASED", "message": "x"}})
+        created = body["order_id"] not in self.reserved
+        self.reserved[body["order_id"]] = body["items"]
+        return httpx2.Response(201 if created else 200,
+                               json={"order_id": body["order_id"], "status": "RESERVED", "items": body["items"]})
+
+
 @pytest.fixture
-def client(db_session, catalog):
+def inventory(monkeypatch):
+    from app.clients import inventory_client
+
+    fake = FakeInventory()
+    monkeypatch.setattr(inventory_client.client, "transport", httpx2.MockTransport(fake))
+    return fake
+
+
+@pytest.fixture
+def client(db_session, catalog, inventory):
     """HTTP client using the rollback session and the fake catalogue."""
     from fastapi.testclient import TestClient
 
