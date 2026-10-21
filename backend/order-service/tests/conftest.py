@@ -44,3 +44,23 @@ def fake(monkeypatch):
         monkeypatch.setattr(module.client, "transport", httpx2.MockTransport(service))
         return service
     return install
+
+
+@pytest.fixture
+def db_session():
+    """A real database session whose changes are rolled back after each test."""
+    from sqlalchemy.orm import Session
+
+    from app.database import engine
+
+    try:
+        connection = engine.connect()
+    except Exception:
+        pytest.skip("database not available")
+
+    transaction = connection.begin()
+    session = Session(bind=connection, join_transaction_mode="create_savepoint")
+    yield session
+    session.close()
+    transaction.rollback()
+    connection.close()
