@@ -1,0 +1,10 @@
+# Local development only. Copy to "compose.override.yaml" (ignored by Git).
+# Docker Compose merges it automatically with compose.yaml.
+services:
+  postgres:
+    ports:
+      # Only reachable from this PC (127.0.0.1), on port 5433
+      - "127.0.0.1:5433:5432"
+    networks:
+      # data-net is internal, so a normal network is needed to publish the port
+      - default
