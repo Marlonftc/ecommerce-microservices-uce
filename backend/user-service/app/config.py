@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     db_user: str = "user_svc"
     db_password: str
 
+    # Initial administrator, created by app/seed.py
+    admin_email: str | None = None
+    admin_password: str | None = None
+    admin_name: str = "Administrador"
+
     @property
     def database_url(self) -> URL:
         # URL.create escapes special characters in the password
