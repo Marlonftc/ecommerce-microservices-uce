@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     service folder. Inside Docker, Compose provides them.
     """
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # hide_input_in_errors: a configuration error names the wrong field but
+    # never prints the received values, which include passwords.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
 
     service_name: str = "product-service"
     log_level: str = "INFO"

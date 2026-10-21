@@ -1,0 +1,13 @@
+# Never copy local environments, secrets or caches into the image
+.venv/
+.env
+.env.*
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Not needed to run the service
+tests/
+requirements-dev.txt
+Dockerfile
+.dockerignore

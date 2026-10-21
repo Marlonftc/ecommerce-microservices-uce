@@ -96,6 +96,8 @@ services:
       DB_NAME: ${PRODUCT_DB_NAME:?set in .env}
       DB_USER: ${PRODUCT_DB_USER:?set in .env}
       DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?set in .env}
+      # Required by the configuration, which the job shares with the service
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set in .env}
     depends_on:
       postgres:
         condition: service_healthy
@@ -112,6 +114,7 @@ services:
       DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?set in .env}
       JWT_ISSUER: ${JWT_ISSUER:-user-service}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-ecommerce-uce}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set in .env}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     secrets:
       - jwt_public_key  # only the public key: it verifies tokens, never issues them
@@ -119,6 +122,53 @@ services:
       postgres:
         condition: service_healthy
       product-migrate:
+        condition: service_completed_successfully
+    networks:
+      - ecommerce-net
+      - data-net
+
+  # ---------- inventory-service ----------
+  # One-shot job: applies migrations and loads the initial stock, then exits.
+  inventory-migrate:
+    build: ./backend/inventory-service
+    image: ecommerce-uce/inventory-service
+    command: ["sh", "-c", "alembic upgrade head && python -m app.seed"]
+    restart: "no"
+    environment:
+      DB_NAME: ${INVENTORY_DB_NAME:?set in .env}
+      DB_USER: ${INVENTORY_DB_USER:?set in .env}
+      DB_PASSWORD: ${INVENTORY_DB_PASSWORD:?set in .env}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - data-net
+
+  inventory-service:
+    build: ./backend/inventory-service
+    image: ecommerce-uce/inventory-service
+    restart: always
+    environment:
+      DB_NAME: ${INVENTORY_DB_NAME:?set in .env}
+      DB_USER: ${INVENTORY_DB_USER:?set in .env}
+      DB_PASSWORD: ${INVENTORY_DB_PASSWORD:?set in .env}
+      JWT_ISSUER: ${JWT_ISSUER:-user-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-ecommerce-uce}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set in .env}
+      # Reached by service name through the Docker network, never by IP
+      PRODUCT_SERVICE_URL: http://product-service:8000
+      HTTP_CONNECT_TIMEOUT_SECONDS: ${HTTP_CONNECT_TIMEOUT_SECONDS:-2}
+      HTTP_READ_TIMEOUT_SECONDS: ${HTTP_READ_TIMEOUT_SECONDS:-5}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    secrets:
+      - jwt_public_key
+    # No depends_on product-service on purpose: reservations work without it,
+    # and a stopped product-service must not prevent inventory from starting.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      inventory-migrate:
         condition: service_completed_successfully
     networks:
       - ecommerce-net
