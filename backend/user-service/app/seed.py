@@ -1,6 +1,8 @@
 """Creates the initial administrator. Safe to run many times."""
 import logging
+import sys
 
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import select
 
 from app.config import settings
@@ -18,6 +20,13 @@ def create_admin() -> None:
         return
 
     email = settings.admin_email.strip().lower()
+    try:
+        # Same rule as /auth/register: no account that could not register
+        TypeAdapter(EmailStr).validate_python(email)
+    except ValidationError:
+        logger.error("ADMIN_EMAIL %r is not a valid email address", email)
+        sys.exit(1)
+
     with SessionLocal() as db:
         if db.scalar(select(User).where(User.email == email)):
             logger.info("admin %s already exists", email)
