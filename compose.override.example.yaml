@@ -13,3 +13,14 @@ services:
     ports:
       # Temporary access to Swagger until the gateway exists
       - "127.0.0.1:8001:8000"
+
+  product-service:
+    ports:
+      # Temporary access to Swagger until the gateway exists.
+      # Must be removed before scaling: replicas cannot share a host port.
+      - "127.0.0.1:8002:8000"
+
+  inventory-service:
+    ports:
+      # Temporary access to Swagger until the gateway exists
+      - "127.0.0.1:8003:8000"

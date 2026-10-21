@@ -51,5 +51,6 @@ Pendiente.
 - Mientras un pedido está en proceso de compra, el carrito no se puede modificar. Si el pago se aprueba, el carrito se vacía; si se rechaza o se cancela el pedido, se conserva.
 - Se usa una sola instancia de PostgreSQL con una base de datos y un usuario por servicio, por lo que el aislamiento es lógico y no físico.
 - Los pagos y las notificaciones son simulados.
+- Los tokens de acceso duran 30 minutos. Desactivar un usuario o cambiar su rol no invalida los tokens que ya tenía: los servicios que solo verifican la firma seguirán aceptándolos hasta que expiren.
 
 Las decisiones de diseño están en [docs/architecture/decisiones.md](docs/architecture/decisiones.md).

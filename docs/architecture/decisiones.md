@@ -14,8 +14,9 @@ Decisiones aprobadas antes de iniciar la implementación (Fase 4).
 | D08 | Idempotencia obligatoria en creación y pago de pedidos | Evitar efectos de negocio duplicados ante reintentos |
 | D09 | Inventario sin temporizadores; expiración controlada por order-service | Evitar liberar stock de un pedido con pago en curso |
 | D10 | Carrito bloqueado durante el checkout | Evitar inconsistencias entre carrito y pedido (ver limitación en README) |
-| D11 | JWT RS256 con clave privada solo en user-service | Los demás servicios verifican pero no pueden emitir tokens |
+| D11 | JWT RS256 con clave privada solo en user-service; duración de 30 minutos, sin revocación en esta versión | Los demás servicios verifican pero no pueden emitir tokens. Un token emitido sigue siendo válido hasta expirar aunque el usuario se desactive |
 | D12 | Jobs de migración de un solo uso por servicio | Migración controlada y única antes de escalar |
 | D13 | Healthcheck sobre `/health/ready` + `restart: always` | El healthcheck informa; la política de reinicio recupera el proceso |
 | D14 | Escalado de product-service con `--scale` y resolución DNS dinámica en Nginx | Servicio de mayor demanda esperada (hipótesis) |
 | D15 | Sin broker de mensajes ni circuit breaker inicial | Proporcionalidad al alcance del examen |
+| D16 | Productos e inventario se relacionan por `product_id`, sin claves foráneas entre bases | Cada servicio es dueño de sus datos. Los productos iniciales usan ids conocidos con datos semilla idempotentes, y el inventario admite existencias de cualquier producto creado después |

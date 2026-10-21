@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     service folder. Inside Docker, Compose provides them.
     """
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # hide_input_in_errors: a configuration error names the wrong field but
+    # never prints the received values, which include passwords.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
 
     service_name: str = "user-service"
     log_level: str = "INFO"
@@ -26,7 +28,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "RS256"
     jwt_issuer: str = "user-service"
     jwt_audience: str = "ecommerce-uce"
-    jwt_expire_minutes: int = 60
+    jwt_expire_minutes: int = 30
 
     # Initial administrator, created by app/seed.py
     admin_email: str | None = None
