@@ -1,5 +1,6 @@
 """Helpers for the end-to-end tests: real services in Docker, reached through
-the 127.0.0.1 ports of compose.override.example.yaml.
+the 127.0.0.1 ports of compose.override.example.yaml. product-service has no
+published port (it can be scaled), so it is reached through the gateway.
 
 Credentials: the admin account is read from the root .env (never printed);
 customers are created for each test with random passwords kept in memory.
@@ -19,11 +20,13 @@ ROOT = Path(__file__).resolve().parents[2]
 ENV = dotenv_values(ROOT / ".env")
 COMPOSE = ["docker", "compose", "-f", "compose.yaml", "-f", "compose.override.example.yaml",
            "-f", "compose.e2e.yaml"]
-PORTS = {"user": 8001, "product": 8002, "inventory": 8003, "payment": 8004,
-         "notification": 8005, "order": 8006}
+PORTS = {"user": 8001, "inventory": 8003, "payment": 8004, "notification": 8005, "order": 8006}
+GATEWAY = f"http://127.0.0.1:{ENV.get('GATEWAY_PORT') or 8080}"
 
 
 def http(service: str) -> httpx2.Client:
+    if service == "product":
+        return httpx2.Client(base_url=f"{GATEWAY}/api", timeout=60)
     return httpx2.Client(base_url=f"http://127.0.0.1:{PORTS[service]}", timeout=60)
 
 
