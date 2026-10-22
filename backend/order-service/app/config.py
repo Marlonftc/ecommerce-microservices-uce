@@ -1,3 +1,5 @@
+import tempfile
+from pathlib import Path
 from typing import Self
 
 from pydantic import model_validator
@@ -45,6 +47,9 @@ class Settings(DatabaseSettings):
     worker_slow_retry_seconds: int = 900
     # A claimed operation not finished in this time can be taken by another worker
     worker_lease_seconds: int = 60
+    # The worker touches this file while it makes progress; its healthcheck reads it
+    worker_heartbeat_file: str = str(Path(tempfile.gettempdir()) / "order-worker.heartbeat")
+    worker_heartbeat_max_age_seconds: int = 60
 
     @model_validator(mode="after")
     def lease_covers_a_call(self) -> Self:
@@ -54,6 +59,11 @@ class Settings(DatabaseSettings):
         if self.worker_lease_seconds < 2 * longest_call:
             raise ValueError(f"WORKER_LEASE_SECONDS must be at least {2 * longest_call:g} "
                              f"with the current HTTP timeouts")
+        # Between two heartbeats there is at most one pause and one call: a worker
+        # busy with a slow call is never reported unhealthy
+        if self.worker_heartbeat_max_age_seconds < self.worker_poll_seconds + 2 * longest_call:
+            raise ValueError("WORKER_HEARTBEAT_MAX_AGE_SECONDS is too short for the poll interval "
+                             "and the HTTP timeouts")
         return self
 
 

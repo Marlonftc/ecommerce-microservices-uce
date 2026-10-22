@@ -10,6 +10,11 @@ them from taking the same row. External calls can still be repeated (a
 worker may stop after the call and before recording it); every call is
 idempotent, so a repeated call has no new effect.
 
+Health: the worker touches WORKER_HEARTBEAT_FILE after reaching the database
+in each cycle and before each operation. A call lasts at most a few seconds,
+so a healthy worker never goes WORKER_HEARTBEAT_MAX_AGE_SECONDS without a
+heartbeat; a stuck one (or one that cannot reach the database) does.
+
 SIGTERM / SIGINT (and CTRL+BREAK on Windows): no new operation is claimed,
 the current one finishes, the connections are closed and the process exits.
 If the process is killed instead, the leases expire and another worker
@@ -18,6 +23,8 @@ takes over the operations.
 import logging
 import signal
 import threading
+import time
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 
@@ -40,14 +47,23 @@ class Worker:
             logger.info("stop requested: finishing the current work")
         self.stopping.set()
 
+    @staticmethod
+    def heartbeat() -> None:
+        try:
+            Path(settings.worker_heartbeat_file).write_text(str(time.time()))
+        except OSError:
+            logger.warning("cannot write heartbeat file %s", settings.worker_heartbeat_file)
+
     def run_once(self) -> dict[str, int]:
         stats = {"expired": 0, "swept": 0, "done": 0, "retry": 0, "failed": 0, "lost": 0}
         with self.session_factory() as db:
             stats["expired"] = recovery.expire_orders(db)
             stats["swept"] = recovery.sweep_reserving(db)
+            self.heartbeat()  # the database answered: the worker makes progress
             for _ in range(BATCH):
                 if self.stopping.is_set():
                     break  # nothing more is claimed after a stop request
+                self.heartbeat()
                 result = self._run_next(db)
                 if result is None:
                     break

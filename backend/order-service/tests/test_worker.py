@@ -390,3 +390,27 @@ def test_a_locked_operation_does_not_block_the_worker(http, notifications):
 
     assert finished_while_locked                       # did not wait for the locked row
     assert ops(ids[1])["ORDER_PAID"].status == "DONE"  # took the next one instead
+
+
+# Worker healthcheck (stage 7) ---------------------------------------------------------
+
+def test_heartbeat_is_written_each_cycle_and_read_by_the_healthcheck(http, tmp_path, monkeypatch):
+    import time
+
+    from app import worker_healthcheck
+
+    beat = tmp_path / "heartbeat"
+    monkeypatch.setattr(settings, "worker_heartbeat_file", str(beat))
+    assert worker_healthcheck.main() == 1          # never started
+
+    run_worker()
+    assert worker_healthcheck.main() == 0          # fresh heartbeat
+
+    beat.write_text(str(time.time() - settings.worker_heartbeat_max_age_seconds - 1))
+    assert worker_healthcheck.main() == 1          # no progress for too long
+
+
+def test_heartbeat_age_must_cover_a_poll_and_the_slowest_call():
+    with pytest.raises(ValueError, match="HEARTBEAT"):
+        Settings(_env_file=None, db_password="x", internal_api_key="k",
+                 worker_heartbeat_max_age_seconds=10)

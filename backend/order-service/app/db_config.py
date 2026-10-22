@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -18,6 +19,9 @@ class DatabaseSettings(BaseSettings):
     db_name: str = "orders_db"
     db_user: str = "order_svc"
     db_password: str
+    # Only for the automated tests: their tables live in a separate schema, so
+    # the running containers (and the order-worker) never see test data
+    db_schema: str | None = Field(default=None, pattern=r"^[a-z_][a-z0-9_]*$")
 
     @property
     def database_url(self) -> URL:

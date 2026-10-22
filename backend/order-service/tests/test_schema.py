@@ -33,7 +33,7 @@ def constraints(db, kind):
         "SELECT rel.relname, con.conname FROM pg_constraint con "
         "JOIN pg_class rel ON rel.oid = con.conrelid "
         "JOIN pg_namespace ns ON ns.oid = rel.relnamespace "
-        "WHERE ns.nspname = 'public' AND con.contype = :kind"), {"kind": kind})
+        "WHERE ns.nspname = current_schema() AND con.contype = :kind"), {"kind": kind})
     found: dict[str, set[str]] = {}
     for table, name in rows:
         found.setdefault(table, set()).add(name)
@@ -42,7 +42,7 @@ def constraints(db, kind):
 
 def test_the_five_tables_exist(db_session):
     names = set(db_session.execute(text(
-        "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).scalars())
+        "SELECT tablename FROM pg_tables WHERE schemaname = current_schema()")).scalars())
 
     assert TABLES <= names
 
@@ -58,7 +58,8 @@ def test_internal_foreign_keys_only(db_session):
     rows = set(db_session.execute(text(
         "SELECT con.conname, src.relname, dst.relname FROM pg_constraint con "
         "JOIN pg_class src ON src.oid = con.conrelid JOIN pg_class dst ON dst.oid = con.confrelid "
-        "WHERE con.contype = 'f'")).all())
+        "JOIN pg_namespace ns ON ns.oid = src.relnamespace "
+        "WHERE con.contype = 'f' AND ns.nspname = current_schema()")).all())
 
     assert rows == {
         ("fk_cart_items_user_id_carts", "cart_items", "carts"),
@@ -69,7 +70,7 @@ def test_internal_foreign_keys_only(db_session):
 
 def test_unique_constraints_and_indexes(db_session):
     indexes = dict(db_session.execute(text(
-        "SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = 'public'")).all())
+        "SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = current_schema()")).all())
 
     assert "UNIQUE" in indexes["uq_orders_user_id_checkout_key"]
     assert "(user_id, checkout_key)" in indexes["uq_orders_user_id_checkout_key"]
@@ -80,7 +81,7 @@ def test_unique_constraints_and_indexes(db_session):
 
 def test_partial_index_one_active_order_per_user(db_session):
     definition = db_session.scalar(text(
-        "SELECT indexdef FROM pg_indexes WHERE indexname = 'uq_orders_one_active_per_user'"))
+        "SELECT indexdef FROM pg_indexes WHERE schemaname = current_schema() AND indexname = 'uq_orders_one_active_per_user'"))
 
     assert definition is not None
     assert "UNIQUE" in definition and "(user_id)" in definition
@@ -93,7 +94,7 @@ def test_partial_index_one_active_order_per_user(db_session):
 
 def test_partial_index_of_pending_operations(db_session):
     definition = db_session.scalar(text(
-        "SELECT indexdef FROM pg_indexes WHERE indexname = 'ix_pending_operations_due'"))
+        "SELECT indexdef FROM pg_indexes WHERE schemaname = current_schema() AND indexname = 'ix_pending_operations_due'"))
 
     assert "(next_attempt_at)" in definition and "WHERE" in definition and "DONE" in definition
 
@@ -112,7 +113,13 @@ def test_partial_index_of_pending_operations(db_session):
 def test_column_types(db_session, table, column, expected):
     found = db_session.scalar(text(
         "SELECT format_type(a.atttypid, a.atttypmod) FROM pg_attribute a "
-        "JOIN pg_class c ON c.oid = a.attrelid WHERE c.relname = :t AND a.attname = :c"),
+        "JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace ns ON ns.oid = c.relnamespace "
+        "WHERE ns.nspname = current_schema() AND c.relname = :t AND a.attname = :c"),
         {"t": table, "c": column})
 
     assert found == expected
+
+
+def test_tests_run_in_their_own_schema(db_session):
+    # Never "public": the containers and the real order-worker use that one
+    assert db_session.scalar(text("SELECT current_schema()")) == "order_tests"

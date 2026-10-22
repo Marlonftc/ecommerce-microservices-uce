@@ -13,7 +13,8 @@ engine = create_engine(
     pool_size=5,
     max_overflow=5,
     pool_pre_ping=True,
-    connect_args={"connect_timeout": 3},
+    connect_args={"connect_timeout": 3,
+                  **({"options": f"-c search_path={db_settings.db_schema}"} if db_settings.db_schema else {})},
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)

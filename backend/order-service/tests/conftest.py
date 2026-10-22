@@ -18,6 +18,11 @@ if not Path(".env").exists():
 # Fixed internal key for the tests (overrides a local .env)
 os.environ["INTERNAL_API_KEY"] = "test-internal-key"
 
+# The tests use their own schema in orders_db. The containers use "public", so
+# a running order-worker never takes (or calls other services for) test data.
+TEST_SCHEMA = "order_tests"
+os.environ["DB_SCHEMA"] = TEST_SCHEMA
+
 # Temporary key pair: the private key only exists here to simulate user-service
 _keys_dir = Path(tempfile.mkdtemp())
 _key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -37,6 +42,23 @@ def make_token(user_id: int, role: str = "customer", minutes: int = 30) -> str:
 
 def bearer(user_id: int, role: str = "customer") -> dict:
     return {"Authorization": f"Bearer {make_token(user_id, role)}"}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def test_schema():
+    """Creates the test schema and applies the real migrations to it."""
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import text
+
+    from app.database import engine
+
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {TEST_SCHEMA}"))
+    except Exception:
+        return  # no database: the tests that need it are skipped
+    command.upgrade(Config(str(Path(__file__).resolve().parents[1] / "alembic.ini")), "head")
 
 
 class FakeCatalog:
