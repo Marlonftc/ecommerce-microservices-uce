@@ -1,0 +1,16 @@
+
+run purchase-r1-20261022-002907 (purchase)
+http_reqs: 1481 (12.2 req/s)
+http_req_duration: avg 79.9 ms, p95 187.1 ms, max 786.5 ms
+http_req_duration{expected_response:true}: avg 79.9 ms, p95 187.1 ms, max 786.5 ms
+http_req_duration{name:cart}: avg 56.5 ms, p95 85.3 ms, max 349.3 ms
+http_req_duration{name:checkout}: avg 80.7 ms, p95 137.9 ms, max 273.8 ms
+http_req_duration{name:order_poll}: avg 8.3 ms, p95 17.5 ms, max 26.0 ms
+http_req_duration{name:pay}: avg 169.9 ms, p95 462.3 ms, max 786.5 ms
+http_req_failed: 0.00 %
+http_req_failed{phase:main}: 0.00 %
+checks: 100.00 % passed
+purchases: 364 completed, 0 failed; total time avg 316 ms, p95 695 ms
+thresholds: all met
+ Container ecommerce-uce-k6-run-681e30e64883 Creating
+ Container ecommerce-uce-k6-run-681e30e64883 Created

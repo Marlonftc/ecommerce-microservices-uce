@@ -1,0 +1,106 @@
+{
+  "run_id": "mixed-r1-20261022-003114",
+  "scenario": "mixed",
+  "date": "20261022-003114",
+  "duration_s": 122.2,
+  "k6": "k6 v1.0.0 (commit/41b4984b75-dirty, go1.24.2, linux/amd64)",
+  "k6_exit_code": 0,
+  "k6_exit_meaning": "ok",
+  "extra_env": [],
+  "product_service_replicas": 1,
+  "replica_hostnames": [
+    "8b315dfdd5c0"
+  ],
+  "environment": {
+    "docker_server": "29.9.1",
+    "os": "Docker Desktop",
+    "cpus": 12,
+    "memory_gib": 7.7
+  },
+  "gateway": {
+    "note": "Public requests that reached the gateway in this run. Calls between microservices do not pass through the gateway and are not included.",
+    "total": 1349,
+    "per_service": {
+      "product-service": 731,
+      "inventory-service": 365,
+      "order-service": 244,
+      "user-service": 9
+    },
+    "per_service_percent": {
+      "product-service": 54.2,
+      "inventory-service": 27.1,
+      "order-service": 18.1,
+      "user-service": 0.7
+    },
+    "status": {
+      "200": 1269,
+      "201": 75,
+      "204": 5
+    },
+    "product_service_replicas": {
+      "ecommerce-uce-product-service-1": 731
+    }
+  },
+  "docker_stats": {
+    "ecommerce-uce-gateway-1": {
+      "cpu_avg_percent": 0.9,
+      "cpu_max_percent": 3.5,
+      "mem_max_mib": 11.6,
+      "samples": 24
+    },
+    "ecommerce-uce-inventory-service-1": {
+      "cpu_avg_percent": 8.1,
+      "cpu_max_percent": 32.6,
+      "mem_max_mib": 91.4,
+      "samples": 24
+    },
+    "ecommerce-uce-k6-run-b2bb7459ca81": {
+      "cpu_avg_percent": 1.5,
+      "cpu_max_percent": 2.4,
+      "mem_max_mib": 21.9,
+      "samples": 24
+    },
+    "ecommerce-uce-notification-service-1": {
+      "cpu_avg_percent": 12.2,
+      "cpu_max_percent": 34.1,
+      "mem_max_mib": 74.5,
+      "samples": 24
+    },
+    "ecommerce-uce-order-service-1": {
+      "cpu_avg_percent": 11.1,
+      "cpu_max_percent": 41.3,
+      "mem_max_mib": 96.9,
+      "samples": 24
+    },
+    "ecommerce-uce-order-worker-1": {
+      "cpu_avg_percent": 8.6,
+      "cpu_max_percent": 74.2,
+      "mem_max_mib": 78.9,
+      "samples": 24
+    },
+    "ecommerce-uce-payment-service-1": {
+      "cpu_avg_percent": 0.4,
+      "cpu_max_percent": 1.2,
+      "mem_max_mib": 69.8,
+      "samples": 24
+    },
+    "ecommerce-uce-postgres-1": {
+      "cpu_avg_percent": 2.5,
+      "cpu_max_percent": 4.7,
+      "mem_max_mib": 113.0,
+      "samples": 24
+    },
+    "ecommerce-uce-product-service-1": {
+      "cpu_avg_percent": 16.8,
+      "cpu_max_percent": 37.4,
+      "mem_max_mib": 86.4,
+      "samples": 24
+    },
+    "ecommerce-uce-user-service-1": {
+      "cpu_avg_percent": 15.1,
+      "cpu_max_percent": 71.7,
+      "mem_max_mib": 85.6,
+      "samples": 24
+    }
+  }
+}

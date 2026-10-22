@@ -1,0 +1,14 @@
+
+run browse-r1-20261022-002700 (browse)
+http_reqs: 3935 (32.5 req/s)
+http_req_duration: avg 6.2 ms, p95 9.3 ms, max 345.9 ms
+http_req_duration{expected_response:true}: avg 6.2 ms, p95 9.3 ms, max 345.9 ms
+http_req_duration{name:detail}: avg 5.3 ms, p95 9.2 ms, max 345.9 ms
+http_req_duration{name:list}: avg 7.7 ms, p95 10.3 ms, max 328.8 ms
+http_req_duration{name:stock}: avg 5.1 ms, p95 6.8 ms, max 292.3 ms
+http_req_failed: 0.00 %
+http_req_failed{phase:main}: 0.00 %
+checks: 100.00 % passed
+thresholds: all met
+ Container ecommerce-uce-k6-run-bb469e59078a Creating
+ Container ecommerce-uce-k6-run-bb469e59078a Created

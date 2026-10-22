@@ -1,0 +1,17 @@
+
+run scale-r1-20261022-003320 (scale)
+http_reqs: 22801 (133.9 req/s)
+http_req_duration: avg 105.2 ms, p95 236.3 ms, max 655.4 ms
+http_req_duration{expected_response:true}: avg 105.2 ms, p95 236.3 ms, max 655.4 ms
+http_req_duration{phase:ramp}: avg 134.9 ms, p95 246.9 ms, max 655.4 ms
+http_req_duration{phase:sustained}: avg 4.7 ms, p95 6.2 ms, max 11.4 ms
+http_req_failed: 0.00 %
+http_req_failed{phase:ramp}: 0.00 %
+http_req_failed{phase:sustained}: 0.00 %
+checks: 100.00 % passed
+dropped_iterations: 0
+sustained: 4802 req (80.0 req/s), avg 4.7 ms, p95 6.2 ms, errors 0.00 %, dropped iterations 0
+ramp: 17596 req (195.5 req/s), avg 134.9 ms, p95 246.9 ms, errors 0.00 %
+thresholds: all met
+ Container ecommerce-uce-k6-run-0c79952705a4 Creating
+ Container ecommerce-uce-k6-run-0c79952705a4 Created

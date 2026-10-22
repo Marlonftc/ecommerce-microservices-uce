@@ -1,0 +1,98 @@
+{
+  "run_id": "scale-r1-20261022-003320",
+  "scenario": "scale",
+  "date": "20261022-003320",
+  "duration_s": 172.0,
+  "k6": "k6 v1.0.0 (commit/41b4984b75-dirty, go1.24.2, linux/amd64)",
+  "k6_exit_code": 0,
+  "k6_exit_meaning": "ok",
+  "extra_env": [],
+  "product_service_replicas": 1,
+  "replica_hostnames": [
+    "8b315dfdd5c0"
+  ],
+  "environment": {
+    "docker_server": "29.9.1",
+    "os": "Docker Desktop",
+    "cpus": 12,
+    "memory_gib": 7.7
+  },
+  "gateway": {
+    "note": "Public requests that reached the gateway in this run. Calls between microservices do not pass through the gateway and are not included.",
+    "total": 22801,
+    "per_service": {
+      "product-service": 22801
+    },
+    "per_service_percent": {
+      "product-service": 100.0
+    },
+    "status": {
+      "200": 22801
+    },
+    "product_service_replicas": {
+      "ecommerce-uce-product-service-1": 22801
+    }
+  },
+  "docker_stats": {
+    "ecommerce-uce-gateway-1": {
+      "cpu_avg_percent": 4.1,
+      "cpu_max_percent": 6.6,
+      "mem_max_mib": 13.8,
+      "samples": 34
+    },
+    "ecommerce-uce-inventory-service-1": {
+      "cpu_avg_percent": 3.1,
+      "cpu_max_percent": 31.2,
+      "mem_max_mib": 87.3,
+      "samples": 34
+    },
+    "ecommerce-uce-k6-run-0c79952705a4": {
+      "cpu_avg_percent": 8.3,
+      "cpu_max_percent": 12.7,
+      "mem_max_mib": 32.6,
+      "samples": 34
+    },
+    "ecommerce-uce-notification-service-1": {
+      "cpu_avg_percent": 3.0,
+      "cpu_max_percent": 33.1,
+      "mem_max_mib": 82.8,
+      "samples": 34
+    },
+    "ecommerce-uce-order-service-1": {
+      "cpu_avg_percent": 2.9,
+      "cpu_max_percent": 33.1,
+      "mem_max_mib": 96.6,
+      "samples": 34
+    },
+    "ecommerce-uce-order-worker-1": {
+      "cpu_avg_percent": 6.7,
+      "cpu_max_percent": 88.1,
+      "mem_max_mib": 88.3,
+      "samples": 34
+    },
+    "ecommerce-uce-payment-service-1": {
+      "cpu_avg_percent": 6.5,
+      "cpu_max_percent": 31.2,
+      "mem_max_mib": 81.4,
+      "samples": 34
+    },
+    "ecommerce-uce-postgres-1": {
+      "cpu_avg_percent": 7.4,
+      "cpu_max_percent": 21.9,
+      "mem_max_mib": 120.7,
+      "samples": 34
+    },
+    "ecommerce-uce-product-service-1": {
+      "cpu_avg_percent": 79.4,
+      "cpu_max_percent": 154.6,
+      "mem_max_mib": 95.0,
+      "samples": 34
+    },
+    "ecommerce-uce-user-service-1": {
+      "cpu_avg_percent": 2.0,
+      "cpu_max_percent": 32.9,
+      "mem_max_mib": 85.4,
+      "samples": 34
+    }
+  }
+}

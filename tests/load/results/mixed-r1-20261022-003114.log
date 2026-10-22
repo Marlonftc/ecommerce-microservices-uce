@@ -1,0 +1,19 @@
+
+run mixed-r1-20261022-003114 (mixed)
+http_reqs: 1349 (11.2 req/s)
+http_req_duration: avg 14.7 ms, p95 97.4 ms, max 272.0 ms
+http_req_duration{expected_response:true}: avg 14.7 ms, p95 97.4 ms, max 272.0 ms
+http_req_duration{name:cart}: avg 40.6 ms, p95 47.9 ms, max 52.0 ms
+http_req_duration{name:checkout}: avg 53.5 ms, p95 59.5 ms, max 70.4 ms
+http_req_duration{name:detail}: avg 4.0 ms, p95 5.1 ms, max 9.0 ms
+http_req_duration{name:list}: avg 5.6 ms, p95 7.0 ms, max 8.5 ms
+http_req_duration{name:pay}: avg 105.2 ms, p95 119.3 ms, max 121.7 ms
+http_req_duration{name:stock}: avg 4.3 ms, p95 5.4 ms, max 7.0 ms
+http_req_failed: 0.00 %
+http_req_failed{phase:main}: 0.00 %
+checks: 100.00 % passed
+purchases: 61 completed, 0 failed; total time avg 205 ms, p95 227 ms
+public requests: browse 1080 (81.6 %), purchase 244 (18.4 %)
+thresholds: all met
+ Container ecommerce-uce-k6-run-b2bb7459ca81 Creating
+ Container ecommerce-uce-k6-run-b2bb7459ca81 Created
