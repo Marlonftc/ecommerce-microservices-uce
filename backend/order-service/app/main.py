@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import check_database
-from app.routers import cart, orders
+from app.routers import admin, cart, orders
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(settings.service_name)
@@ -13,6 +13,7 @@ logger = logging.getLogger(settings.service_name)
 app = FastAPI(title=settings.service_name, version="1.0.0")
 app.include_router(cart.router)
 app.include_router(orders.router)
+app.include_router(admin.router)
 
 
 @app.get("/health/live", tags=["health"])

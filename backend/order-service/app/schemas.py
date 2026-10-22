@@ -87,3 +87,36 @@ class PaymentIn(BaseModel):
 
     # Simulated payment: no card data exists in this system
     simulation: Literal["APPROVE", "REJECT", "SLOW_APPROVE"] = "APPROVE"
+
+
+class OperationOut(BaseModel):
+    """Diagnosis data. The payload holds business data only (no keys or tokens)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    order_id: uuid.UUID
+    kind: str
+    operation_key: str
+    status: str
+    attempts: int
+    error_kind: str | None
+    last_error: str | None
+    next_attempt_at: datetime
+    locked_until: datetime | None
+    payload: dict
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None
+
+
+class OperationPage(BaseModel):
+    items: list[OperationOut]
+    total: int
+    page: int
+    size: int
+
+
+class RetryOut(BaseModel):
+    outcome: str = Field(description="Result of the immediate run: DONE, RETRY, FAILED, SKIPPED or LOST")
+    operation: OperationOut

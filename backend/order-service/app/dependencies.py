@@ -40,3 +40,12 @@ def get_current_user(credentials: Credentials) -> TokenUser:
 
 
 CurrentUser = Annotated[TokenUser, Depends(get_current_user)]
+
+
+def require_admin(user: CurrentUser) -> TokenUser:
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
+    return user
+
+
+AdminUser = Annotated[TokenUser, Depends(require_admin)]

@@ -228,8 +228,10 @@ class FakeNotifications:
     def __init__(self):
         self.mode = "ok"
         self.events: dict[str, dict] = {}
+        self.calls = 0
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        self.calls += 1
         if self.mode == "down":
             raise httpx2.ConnectError("notification-service down")
         body = json.loads(request.content)

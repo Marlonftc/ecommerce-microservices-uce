@@ -9,7 +9,7 @@ from app.clients.base import ServiceUnavailable, UnexpectedResponse
 from app.dependencies import CurrentUser, DbSession
 from app.models import Order
 from app.schemas import CheckoutIn, OrderOut, OrderPage, PaymentIn
-from app.services import executor, payment_flow
+from app.services import executor, payment_flow, recovery
 from app.services import order_service as os_
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -128,4 +128,19 @@ def pay_order(order_id: uuid.UUID, data: PaymentIn, db: DbSession, user: Current
         raise _conflict("ORDER_NOT_PAYABLE", "This order cannot be paid", status=exc.status)
     if order.status == "PAYMENT_PENDING":
         response.status_code = status.HTTP_202_ACCEPTED
+    return _out(db, order)
+
+
+@router.post("/{order_id}/cancel", response_model=OrderOut,
+             responses={**AUTH, 404: {"description": "Order not found"},
+                        409: {"description": "ORDER_NOT_CANCELLABLE"}})
+def cancel_order(order_id: uuid.UUID, db: DbSession, user: CurrentUser):
+    """Owner only. From PENDING_PAYMENT: the reservation is released and the
+    customer is notified. Repeating it returns the cancelled order."""
+    try:
+        order = recovery.cancel_by_user(db, user.id, order_id)
+    except os_.OrderNotFound:
+        raise HTTPException(status_code=404, detail="Order not found")
+    except recovery.OrderNotCancellable as exc:
+        raise _conflict("ORDER_NOT_CANCELLABLE", "This order cannot be cancelled", status=exc.status)
     return _out(db, order)

@@ -21,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import or_, select, true, update
+from sqlalchemy import and_, or_, select, true, update
 from sqlalchemy.orm import Session
 
 from app.clients import inventory_client, notification_client, payment_client
@@ -55,28 +55,60 @@ class Claim:
 
 # --- 1. claim ------------------------------------------------------------------------
 
-def claim(db: Session, op_id: int, ignore_schedule: bool = False) -> Claim | None:
-    """Takes the operation if it is PENDING and nobody holds a valid lease.
+# PENDING, or FAILED/TRANSIENT (slow lane). FAILED/PERMANENT and DONE never run on their own.
+ELIGIBLE = or_(PendingOperation.status == "PENDING",
+               and_(PendingOperation.status == "FAILED", PendingOperation.error_kind == "TRANSIENT"))
 
-    ignore_schedule: a customer retry (same Idempotency-Key) runs it now even
-    if its next automatic attempt is scheduled later.
-    """
+
+def _lease_free(now: datetime):
+    return or_(PendingOperation.locked_until.is_(None), PendingOperation.locked_until < now)
+
+
+def _take(db: Session, *conditions) -> Claim | None:
+    """One UPDATE that checks eligibility and writes the lease, then commit."""
     now = datetime.now(UTC)
     token = uuid.uuid4()
-    conditions = [PendingOperation.id == op_id, PendingOperation.status == "PENDING",
-                  or_(PendingOperation.locked_until.is_(None), PendingOperation.locked_until < now)]
-    if not ignore_schedule:
-        conditions.append(PendingOperation.next_attempt_at <= now)
     row = db.execute(
         update(PendingOperation).where(*conditions)
         .values(lease_token=token, locked_until=now + timedelta(seconds=settings.worker_lease_seconds),
                 attempts=PendingOperation.attempts + 1)
-        .returning(PendingOperation.order_id, PendingOperation.kind, PendingOperation.payload)
+        .returning(PendingOperation.id, PendingOperation.order_id, PendingOperation.kind,
+                   PendingOperation.payload)
     ).one_or_none()
     db.commit()  # the lease is visible to everyone before any HTTP call
     if row is None:
         return None
-    return Claim(op_id, row.order_id, row.kind, row.payload, token)
+    return Claim(row.id, row.order_id, row.kind, row.payload, token)
+
+
+def claim(db: Session, op_id: int, ignore_schedule: bool = False) -> Claim | None:
+    """Takes one known operation if it is eligible and nobody holds a valid lease.
+
+    ignore_schedule: a customer retry (same Idempotency-Key) or an admin
+    reactivation runs it now even if its next attempt is scheduled later.
+    """
+    now = datetime.now(UTC)
+    conditions = [PendingOperation.id == op_id, ELIGIBLE, _lease_free(now)]
+    if not ignore_schedule:
+        conditions.append(PendingOperation.next_attempt_at <= now)
+    return _take(db, *conditions)
+
+
+def claim_next(db: Session) -> Claim | None:
+    """Worker: chooses AND claims the next due operation in one statement.
+
+    SKIP LOCKED makes two workers pick different rows instead of waiting for
+    each other. Claiming one at a time starts each lease right before its own
+    call, so a lease never expires while the operation waits in a batch.
+    """
+    now = datetime.now(UTC)
+    next_due = (select(PendingOperation.id)
+                .where(ELIGIBLE, _lease_free(now), PendingOperation.next_attempt_at <= now)
+                .order_by(PendingOperation.next_attempt_at, PendingOperation.id)
+                .limit(1)
+                .with_for_update(skip_locked=True)
+                .scalar_subquery())
+    return _take(db, PendingOperation.id == next_due)
 
 
 # --- 3. finish ---------------------------------------------------------------------------
@@ -84,7 +116,7 @@ def claim(db: Session, op_id: int, ignore_schedule: bool = False) -> Claim | Non
 def _lock_if_still_ours(db: Session, c: Claim) -> PendingOperation | None:
     return db.scalar(select(PendingOperation)
                      .where(PendingOperation.id == c.id, PendingOperation.lease_token == c.token,
-                            PendingOperation.status == "PENDING")
+                            PendingOperation.status != "DONE")
                      .with_for_update())
 
 
@@ -122,7 +154,7 @@ def _fail(db: Session, c: Claim, error: Exception, permanent: bool) -> str:
     if permanent:
         op.status, op.error_kind = "FAILED", "PERMANENT"
     elif op.attempts >= settings.worker_max_fast_attempts:
-        # Slow lane: the stage 6 worker will retry it every WORKER_SLOW_RETRY_SECONDS
+        # Slow lane: the worker retries it every WORKER_SLOW_RETRY_SECONDS, never drops it
         op.status, op.error_kind = "FAILED", "TRANSIENT"
         op.next_attempt_at = now + timedelta(seconds=settings.worker_slow_retry_seconds)
     else:
@@ -248,17 +280,22 @@ HANDLERS = {
 
 # --- entry points ---------------------------------------------------------------------
 
-def run_operation(db: Session, op_id: int, ignore_schedule: bool = False) -> str:
-    """Claims and runs one operation. Returns DONE, RETRY, FAILED, SKIPPED or LOST."""
-    c = claim(db, op_id, ignore_schedule)
-    if c is None:
-        return SKIPPED  # done, failed, not due yet, or another runner holds it
+def execute(db: Session, c: Claim) -> str:
+    """Runs a claimed operation. Returns DONE, RETRY, FAILED or LOST."""
     try:
         return HANDLERS[c.kind](db, c)
     except Transient as exc:
         return _fail(db, c, exc, permanent=False)
     except Permanent as exc:
         return _fail(db, c, exc, permanent=True)
+
+
+def run_operation(db: Session, op_id: int, ignore_schedule: bool = False) -> str:
+    """Claims and runs one operation. Returns DONE, RETRY, FAILED, SKIPPED or LOST."""
+    c = claim(db, op_id, ignore_schedule)
+    if c is None:
+        return SKIPPED  # done, permanent, not due yet, or another runner holds it
+    return execute(db, c)
 
 
 def run_order_operations(db: Session, order_id: uuid.UUID, ignore_schedule: bool = False) -> None:
@@ -268,8 +305,7 @@ def run_order_operations(db: Session, order_id: uuid.UUID, ignore_schedule: bool
     attempted: set[int] = set()
     while True:
         ids = db.scalars(select(PendingOperation.id)
-                         .where(PendingOperation.order_id == order_id,
-                                PendingOperation.status == "PENDING",
+                         .where(PendingOperation.order_id == order_id, ELIGIBLE,
                                 PendingOperation.id.not_in(attempted) if attempted else true())
                          .order_by(PendingOperation.id)).all()
         db.commit()

@@ -1,3 +1,7 @@
+from typing import Self
+
+from pydantic import model_validator
+
 from app.db_config import DatabaseSettings
 
 
@@ -41,6 +45,16 @@ class Settings(DatabaseSettings):
     worker_slow_retry_seconds: int = 900
     # A claimed operation not finished in this time can be taken by another worker
     worker_lease_seconds: int = 60
+
+    @model_validator(mode="after")
+    def lease_covers_a_call(self) -> Self:
+        # Longest call: a failed connection, one retry, then the full read timeout.
+        # The lease must last at least twice that, so it never expires mid-call.
+        longest_call = 2 * self.http_connect_timeout_seconds + self.http_read_timeout_seconds
+        if self.worker_lease_seconds < 2 * longest_call:
+            raise ValueError(f"WORKER_LEASE_SECONDS must be at least {2 * longest_call:g} "
+                             f"with the current HTTP timeouts")
+        return self
 
 
 settings = Settings()
