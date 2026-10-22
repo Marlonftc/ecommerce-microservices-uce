@@ -13,6 +13,8 @@ backend\order-service\.venv\Scripts\python.exe -m pytest tests/e2e -v
 - `compose.e2e.yaml` acorta los tiempos (reserva de 1 minuto, barrido de 1 minuto, worker cada 2 s).
   Después de las pruebas, vuelve a los tiempos normales con
   `docker compose -f compose.yaml -f compose.override.example.yaml up -d`.
+- product-service no publica puerto (se puede escalar); las pruebas lo usan a través del gateway
+  (`http://127.0.0.1:8080/api/products`).
 - La cuenta de administrador se lee de `.env` (`ADMIN_EMAIL`, `ADMIN_PASSWORD`). Los clientes se
   crean en cada prueba con contraseñas aleatorias que no se guardan ni se muestran.
 - Cada prueba crea sus propios productos (`E2E-...`) y no modifica datos existentes.

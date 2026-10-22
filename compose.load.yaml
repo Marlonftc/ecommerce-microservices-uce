@@ -1,0 +1,21 @@
+# Load tests only (k6). Not started by "docker compose up": the service has a profile.
+# Normally used through tests/load/run_load.py, which adds this file:
+#   docker compose -f compose.yaml -f compose.override.example.yaml -f compose.load.yaml \
+#     run --rm k6 run /scripts/browse.js
+services:
+  k6:
+    image: grafana/k6:1.0.0
+    profiles: ["load"]
+    environment:
+      # Requests go to the gateway by its service name, inside ecommerce-net
+      BASE_URL: http://gateway
+      RESULTS_DIR: /results
+      # Only to create the LOAD- test products; read from the root .env, never stored
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set in .env}
+    volumes:
+      - ./tests/load:/scripts:ro
+      # Summaries written by handleSummary() stay on the host
+      - ./tests/load/results:/results
+    networks:
+      - ecommerce-net

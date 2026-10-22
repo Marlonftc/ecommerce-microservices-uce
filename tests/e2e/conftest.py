@@ -1,6 +1,6 @@
 import pytest
 
-from support import ENV, PORTS, admin, http
+from support import ENV, GATEWAY, PORTS, admin, http
 
 
 def pytest_configure(config):
@@ -21,6 +21,14 @@ def system_is_running():
             pytest.exit(f"{service}-service is not ready on 127.0.0.1:{PORTS[service]}. Start the "
                         "system with compose.yaml + compose.override.example.yaml + compose.e2e.yaml",
                         returncode=2)
+    try:
+        with http("product") as c:
+            ready = c.get("/products", params={"limit": 1}).status_code == 200
+    except Exception:
+        ready = False
+    if not ready:
+        pytest.exit(f"product-service is not reachable through the gateway ({GATEWAY}/api/products)",
+                    returncode=2)
 
 
 @pytest.fixture(scope="session")

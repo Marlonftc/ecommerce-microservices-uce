@@ -364,6 +364,25 @@ services:
       - ecommerce-net
       - data-net
 
+  # ---------- API Gateway ----------
+  # Single entry point. Only ecommerce-net: it cannot reach PostgreSQL and
+  # receives no database credentials, keys or secrets.
+  gateway:
+    build: ./gateway
+    image: ecommerce-uce/gateway
+    restart: always
+    ports:
+      # The only published port of the system, reachable from this PC only
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:80"
+    # Configuration is part of the image; pid and temporary files use tmpfs
+    read_only: true
+    tmpfs:
+      - /tmp
+    # No depends_on: nginx starts even if a service is down (that route answers
+    # 502) and finds the services through Docker DNS when they appear
+    networks:
+      - ecommerce-net
+
 networks:
   # Gateway and microservices
   ecommerce-net:

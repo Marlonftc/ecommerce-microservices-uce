@@ -1,5 +1,5 @@
 # Local development only: publishes ports on 127.0.0.1 (this PC only).
-# compose.yaml never publishes service ports.
+# compose.yaml publishes only the gateway (127.0.0.1:8080).
 #
 # Load it explicitly:
 #   docker compose -f compose.yaml -f compose.override.example.yaml up -d
@@ -16,31 +16,29 @@ services:
 
   user-service:
     ports:
-      # Temporary access to Swagger until the gateway exists
+      # Direct access for debugging and Swagger (/docs); clients use the gateway
       - "127.0.0.1:8001:8000"
 
-  product-service:
-    ports:
-      # Temporary access to Swagger until the gateway exists.
-      # Must be removed before scaling: replicas cannot share a host port.
-      - "127.0.0.1:8002:8000"
+  # product-service publishes no port: it is scaled with --scale and reached
+  # through the gateway (http://127.0.0.1:8080/api/products). Replicas could
+  # not share one host port.
 
   inventory-service:
     ports:
-      # Temporary access to Swagger until the gateway exists
+      # Direct access for debugging and Swagger (/docs); clients use the gateway
       - "127.0.0.1:8003:8000"
 
   payment-service:
     ports:
-      # Temporary access to Swagger until the gateway exists
+      # Direct access for debugging and Swagger (/docs); clients use the gateway
       - "127.0.0.1:8004:8000"
 
   notification-service:
     ports:
-      # Temporary access to Swagger until the gateway exists
+      # Direct access for debugging and Swagger (/docs); clients use the gateway
       - "127.0.0.1:8005:8000"
 
   order-service:
     ports:
-      # Temporary access to Swagger until the gateway exists
+      # Direct access for debugging and Swagger (/docs); clients use the gateway
       - "127.0.0.1:8006:8000"
