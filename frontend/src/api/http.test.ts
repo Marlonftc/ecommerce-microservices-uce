@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from './errors';
-import { buildUrl, http, request, setTokenProvider } from './http';
+import { buildUrl, http, request, setTokenProvider, setUnauthorizedHandler } from './http';
 
 function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -15,6 +15,7 @@ beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal('fetch', fetchMock);
   setTokenProvider(() => null);
+  setUnauthorizedHandler(null);
 });
 
 afterEach(() => {
@@ -196,5 +197,34 @@ describe('network failures', () => {
     const pending = http.get('/orders', { signal: controller.signal });
     controller.abort();
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
+
+describe('unauthorized handler', () => {
+  it('receives the token that the failed request carried', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    setTokenProvider(() => 'token-A');
+    fetchMock.mockResolvedValueOnce(jsonResponse(401, { detail: 'Invalid or expired token' }));
+    const error = await failure(http.get('/users/me'));
+    expect(handler).toHaveBeenCalledWith(error, 'token-A');
+  });
+
+  it('is not called for requests sent without a token (login: wrong credentials)', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    setTokenProvider(() => 'token-A');
+    fetchMock.mockResolvedValueOnce(jsonResponse(401, { detail: 'Invalid credentials' }));
+    await failure(http.post('/auth/login', {}, { auth: false }));
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('is not called for other errors', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    setTokenProvider(() => 'token-A');
+    fetchMock.mockResolvedValueOnce(jsonResponse(403, { detail: 'Admin role required' }));
+    await failure(http.get('/users'));
+    expect(handler).not.toHaveBeenCalled();
   });
 });

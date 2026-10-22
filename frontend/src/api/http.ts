@@ -38,6 +38,18 @@ export function setTokenProvider(provider: TokenProvider): void {
   tokenProvider = provider;
 }
 
+/**
+ * Called when a request that carried a token gets 401. It receives the token that
+ * request used, so the session module can ignore answers to an older session.
+ * Requests sent without a token (login, register) never trigger it.
+ */
+type UnauthorizedHandler = (error: ApiError, sentToken: string) => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler;
+}
+
 // Only the services add this header between themselves; the browser must never send it
 const FORBIDDEN_HEADERS = new Set(['x-internal-key']);
 
@@ -79,10 +91,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     headers[name] = value;
   }
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (auth) {
-    const token = tokenProvider();
-    if (token) headers.Authorization = `Bearer ${token}`;
-  }
+  const sentToken = auth ? tokenProvider() : null;
+  if (sentToken) headers.Authorization = `Bearer ${sentToken}`;
 
   const controller = new AbortController();
   let timedOut = false;
@@ -123,7 +133,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     throw ApiError.network();
   }
   if (!response.ok) {
-    throw ApiError.fromResponse(response.status, data, requestId, response.headers.get('Retry-After'));
+    const error = ApiError.fromResponse(response.status, data, requestId, response.headers.get('Retry-After'));
+    if (response.status === 401 && sentToken && unauthorizedHandler) unauthorizedHandler(error, sentToken);
+    throw error;
   }
   return { data: data as T, status: response.status, requestId };
 }

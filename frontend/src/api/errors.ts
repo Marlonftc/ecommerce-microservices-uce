@@ -97,9 +97,25 @@ export class ApiError extends Error {
   static fromResponse(status: number, body: unknown, requestId: string | null, retryAfter: string | null): ApiError {
     const { code, detail, issues } = readDetail(body);
     const message = (code && MESSAGES_BY_CODE[code]) ?? MESSAGES_BY_STATUS[status] ?? `Error inesperado (HTTP ${status}).`;
-    const seconds = retryAfter !== null && /^\d+$/.test(retryAfter.trim()) ? Number(retryAfter) : null;
-    return new ApiError({ kind: 'http', message, status, code, detail, issues, requestId, retryAfter: seconds });
+    return new ApiError({
+      kind: 'http', message, status, code, detail, issues, requestId, retryAfter: parseRetryAfter(retryAfter),
+    });
   }
+}
+
+/**
+ * Retry-After is either a number of seconds or an HTTP date (RFC 9110). Returns the
+ * seconds to wait, or null when the header is missing or not understood: the time is
+ * never invented.
+ */
+export function parseRetryAfter(value: string | null, now: number = Date.now()): number | null {
+  if (value === null) return null;
+  const text = value.trim();
+  if (/^\d+$/.test(text)) return Number(text);
+  if (!/[a-z]/i.test(text)) return null;
+  const date = Date.parse(text);
+  if (Number.isNaN(date)) return null;
+  return Math.max(0, Math.ceil((date - now) / 1000));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

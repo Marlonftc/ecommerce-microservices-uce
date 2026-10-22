@@ -1,4 +1,5 @@
-import { NavLink, Outlet, Link } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 function BrandMark() {
   return (
@@ -11,6 +12,52 @@ function BrandMark() {
   );
 }
 
+function SessionNav() {
+  const { status, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  if (status === 'authenticated' && user) {
+    return (
+      <>
+        <NavLink to="/cuenta" className="site-nav__link">
+          Mi cuenta
+        </NavLink>
+        {user.role === 'admin' && (
+          <NavLink to="/admin" className="site-nav__link">
+            Administración
+          </NavLink>
+        )}
+        <span className="site-nav__user" title={user.email}>
+          {user.full_name}
+        </span>
+        <button
+          type="button"
+          className="site-nav__link site-nav__button"
+          onClick={() => {
+            logout();
+            navigate('/', { replace: true });
+          }}
+        >
+          Cerrar sesión
+        </button>
+      </>
+    );
+  }
+  if (status === 'anonymous') {
+    return (
+      <>
+        <NavLink to="/login" className="site-nav__link">
+          Iniciar sesión
+        </NavLink>
+        <NavLink to="/registro" className="site-nav__link site-nav__link--accent">
+          Crear cuenta
+        </NavLink>
+      </>
+    );
+  }
+  return null; // loading or unavailable: no session links yet
+}
+
 export function Layout() {
   return (
     <div className="app-shell">
@@ -21,11 +68,11 @@ export function Layout() {
             <span>E-Commerce UCE</span>
             <span className="brand__sub">Tienda de tecnología</span>
           </Link>
-          {/* Only pages that exist are linked; the rest are added stage by stage */}
           <nav className="site-nav" aria-label="Navegación principal">
             <NavLink to="/" end className="site-nav__link">
               Inicio
             </NavLink>
+            <SessionNav />
           </nav>
         </div>
       </header>
