@@ -204,7 +204,8 @@ describe('roles', () => {
     renderAt('/admin');
     expect(await screen.findByRole('heading', { name: 'Administración' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Administración' })).toBeTruthy();
-    expect(calls.map((c) => c.key)).toEqual(['GET /api/users/me']);
+    // Since stage 3 the cart of every signed-in user is read; no admin endpoint is called
+    expect(calls.map((c) => c.key).sort()).toEqual(['GET /api/cart', 'GET /api/users/me']);
   });
 
   it('anonymous at /admin is sent to login', async () => {

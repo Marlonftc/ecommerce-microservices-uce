@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useCart } from '../cart/CartContext';
 
 function BrandMark() {
   return (
@@ -12,6 +13,22 @@ function BrandMark() {
   );
 }
 
+/** Cart link with the number of units confirmed by order-service */
+function CartLink() {
+  const { cart, itemCount } = useCart();
+  const label = cart ? `Carrito, ${itemCount} ${itemCount === 1 ? 'unidad' : 'unidades'}` : 'Carrito';
+  return (
+    <NavLink to="/carrito" className="site-nav__link" aria-label={label}>
+      Carrito
+      {cart && itemCount > 0 && (
+        <span className="site-nav__count" aria-hidden="true">
+          {itemCount}
+        </span>
+      )}
+    </NavLink>
+  );
+}
+
 function SessionNav() {
   const { status, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -19,6 +36,7 @@ function SessionNav() {
   if (status === 'authenticated' && user) {
     return (
       <>
+        <CartLink />
         <NavLink to="/cuenta" className="site-nav__link">
           Mi cuenta
         </NavLink>
@@ -71,6 +89,9 @@ export function Layout() {
           <nav className="site-nav" aria-label="Navegación principal">
             <NavLink to="/" end className="site-nav__link">
               Inicio
+            </NavLink>
+            <NavLink to="/productos" className="site-nav__link">
+              Catálogo
             </NavLink>
             <SessionNav />
           </nav>

@@ -32,8 +32,9 @@ npm run build       # compilación de producción en dist/
 | Ruta | Acceso |
 |---|---|
 | `/` | Pública |
+| `/productos`, `/productos/:id` | Públicas; agregar al carrito pide iniciar sesión |
 | `/login`, `/registro` | Solo sin sesión; con sesión se redirige |
-| `/cuenta` | Cualquier usuario con sesión |
+| `/cuenta`, `/carrito` | Cualquier usuario con sesión (cliente o administrador) |
 | `/admin` | Solo administradores; un cliente ve una página 403 |
 
 - El inicio de sesión usa `POST /api/auth/login`; el perfil y el rol se toman siempre de
@@ -53,14 +54,55 @@ npm run build       # compilación de producción en dist/
 - Ocultar un enlace o una página no da ni quita permisos: los microservicios autorizan cada
   solicitud (401 o 403).
 
+## Catálogo y carrito
+
+**Catálogo** (`GET /api/products`, `GET /api/inventory?ids=`):
+
+- Solo productos activos, 12 por página, ordenados como los entrega product-service. La
+  búsqueda (`q`, por nombre), la categoría y la página viven en la URL
+  (`/productos?q=&categoria=&pagina=`).
+- product-service no tiene un endpoint de categorías: se obtienen de los productos activos,
+  leyendo como máximo 5 páginas de 100. **Límite conocido:** con más de 500 productos activos
+  la lista de categorías puede quedar incompleta; la página lo indica.
+- Disponibilidad: «Disponible (n unidades)», «Agotado» (0 unidades), «Sin existencias
+  registradas» (el producto no tiene fila en inventory-service) y «Disponibilidad no verificada»
+  (inventory-service no respondió). Los dos primeros casos bloqueados no se pueden agregar; con
+  inventario caído sí se puede, porque la reserva real ocurre al comprar.
+- El backend no tiene imágenes de productos: se muestra la inicial de la categoría, sin fotos
+  de ejemplo.
+
+**Carrito** (`/api/cart`, order-service). Solo existe en PostgreSQL; el navegador guarda en
+memoria la última versión confirmada y nunca la escribe en `sessionStorage`.
+
+- `PUT /cart/items/{id}` fija la cantidad **absoluta** (1 a 99). Al agregar desde un producto se
+  envía «cantidad actual confirmada + unidades elegidas».
+- Cada cambio envía `expected_version` (en el cuerpo del PUT y en la query de los DELETE) con la
+  versión del último carrito confirmado. Las versiones solo crecen: una respuesta con una versión
+  menor nunca reemplaza un carrito más reciente.
+- Los cambios se ejecutan de uno en uno con un bloqueo interno; un segundo envío mientras otro
+  está en curso no se manda.
+- `CART_CHANGED` y `CART_LOCKED`: se vuelve a leer el carrito, se avisa y **no** se repite el
+  cambio automáticamente. `CART_FULL`: máximo 50 productos distintos.
+- Timeout, error de red o 502/504 del gateway: el cambio pudo haberse aplicado. No se permite
+  otro cambio hasta que `GET /cart` responda de nuevo. Un 502/503 enviado por order-service
+  (catálogo sin responder) sí es seguro: el carrito no cambió.
+- Si product-service no responde, el carrito se muestra con productos y cantidades pero sin
+  precios ni total (`prices_available=false`); se pueden eliminar productos, no cambiar cantidades.
+- Subtotales y total estimado son los que calcula order-service; el navegador no suma importes.
+  El precio final se confirma al crear el pedido (etapa 4).
+- Al cerrar sesión o cambiar de usuario se cancelan las solicitudes pendientes y se ignora
+  cualquier respuesta tardía de la sesión anterior.
+
 ## Estructura
 
 | Carpeta | Contenido |
 |---|---|
-| `src/api/` | Cliente HTTP (`http.ts`), errores (`errors.ts`), tipos de los contratos reales (`types.ts`) y llamadas de autenticación (`auth.ts`) |
+| `src/api/` | Cliente HTTP (`http.ts`), errores (`errors.ts`), tipos de los contratos reales (`types.ts`) y llamadas por servicio (`auth.ts`, `products.ts`, `inventory.ts`, `cart.ts`) |
 | `src/auth/` | Sesión (`session.ts`), contexto (`AuthContext.tsx`), guardias de rutas (`guards.tsx`) y validación del registro |
-| `src/components/` | Layout y componentes base: botón, panel, aviso, indicador de carga, estado vacío, etiqueta de estado |
+| `src/cart/` | Contexto del carrito (`CartContext.tsx`), clasificación de errores y validación de cantidades |
+| `src/catalog/` | Parámetros de la URL, disponibilidad y etiquetas de categorías |
+| `src/components/` | Layout y componentes: botón, panel, aviso, indicador de carga, estado vacío, etiqueta de estado, tarjeta de producto, disponibilidad, cantidad y paginación |
 | `src/pages/` | Páginas |
 | `src/styles/` | Variables de diseño, estilos base y de componentes (CSS propio) |
-| `src/utils/` | Formato de moneda y fechas (es-EC) |
+| `src/utils/` | Formato de moneda y fechas (es-EC) y comparación exacta de importes |
 | `src/test/` | Utilidades de las pruebas (no se incluyen en la compilación) |

@@ -1,5 +1,5 @@
-// Home page of stage 1: explains how the store is built. It shows no simulated
-// features; catalogue, cart and orders are added in later stages.
+// Home page: explains how the store is built and leads to the catalogue.
+import { Link } from 'react-router-dom';
 
 interface ServiceInfo {
   name: string;
@@ -25,6 +25,9 @@ export function HomePage() {
           Cada parte del negocio funciona como un servicio independiente, con su propia base de datos.
           Así se puede actualizar, escalar o recuperar una parte sin detener el resto.
         </p>
+        <Link to="/productos" className="btn btn--primary home-intro__cta">
+          Ver catálogo
+        </Link>
       </section>
 
       <section aria-labelledby="route-title">
