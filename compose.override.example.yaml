@@ -39,3 +39,8 @@ services:
     ports:
       # Temporary access to Swagger until the gateway exists
       - "127.0.0.1:8005:8000"
+
+  order-service:
+    ports:
+      # Temporary access to Swagger until the gateway exists
+      - "127.0.0.1:8006:8000"

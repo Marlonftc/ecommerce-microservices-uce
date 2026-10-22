@@ -1,0 +1,20 @@
+# Short timings ONLY for the end-to-end tests (tests/e2e). Never for normal use.
+# Loaded together with the other two files:
+#   docker compose -f compose.yaml -f compose.override.example.yaml -f compose.e2e.yaml up -d
+services:
+  order-service:
+    environment: &short_timings
+      ORDER_RESERVATION_TTL_MINUTES: 1
+      RESERVING_SWEEP_MINUTES: 1
+      WORKER_POLL_SECONDS: 2
+      WORKER_BACKOFF_MAX_SECONDS: 10
+      # Still twice the slowest call (2 x 2 s connect + 5 s read = 9 s)
+      WORKER_LEASE_SECONDS: 20
+      WORKER_HEARTBEAT_MAX_AGE_SECONDS: 25
+
+  order-worker:
+    environment: *short_timings
+
+  payment-service:
+    environment:
+      PAYMENT_SIMULATION_ENABLED: "true"
