@@ -122,8 +122,18 @@ def test_admin_can_list_users(client, db_session):
     register(client)
     token = login(client, email="jefe@correo.com", password="Admin1234").json()["access_token"]
 
-    response = client.get("/users", headers=auth_header(token))
+    # GET /users returns a JSON list, one page at a time. The database may already
+    # hold more users than one page (for example from E2E runs), so walk every page.
+    emails, offset, page_size = [], 0, 100
+    while True:
+        response = client.get("/users", params={"limit": page_size, "offset": offset},
+                              headers=auth_header(token))
+        assert response.status_code == 200
+        page = response.json()
+        assert isinstance(page, list)
+        emails += [u["email"] for u in page]
+        if len(page) < page_size:
+            break
+        offset += page_size
 
-    assert response.status_code == 200
-    emails = [u["email"] for u in response.json()]
     assert "ana@correo.com" in emails and "jefe@correo.com" in emails

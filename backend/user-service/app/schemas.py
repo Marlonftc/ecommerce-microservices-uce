@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, field_validator, model_validator
 
 
 class RegisterRequest(BaseModel):
@@ -52,3 +53,30 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+
+
+class UserUpdate(BaseModel):
+    """Changes an administrator can make to another account (PATCH /users/{id}).
+
+    Only role and is_active can change. Each field is optional, but an explicit
+    null, an empty body or any other field is rejected with 422.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["customer", "admin"] | None = None
+    # StrictBool: only JSON true/false, not "yes", "1" or 1
+    is_active: StrictBool | None = None
+
+    @field_validator("role", "is_active", mode="before")
+    @classmethod
+    def no_null(cls, value):
+        # Defaults are not validated, so this only rejects a null sent by the client
+        if value is None:
+            raise ValueError("null is not allowed; omit the field instead")
+        return value
+
+    @model_validator(mode="after")
+    def at_least_one_field(self):
+        if not self.model_fields_set:
+            raise ValueError("send role, is_active or both")
+        return self

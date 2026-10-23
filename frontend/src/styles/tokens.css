@@ -1,0 +1,58 @@
+/* Design tokens. System fonts only: the Content-Security-Policy allows no external sources. */
+:root {
+  /* Palette */
+  --color-ink: #16233a;          /* header, headings, main text */
+  --color-text: #24324a;
+  --color-muted: #5b6a80;
+  --color-primary: #1d4f91;      /* actions and links */
+  --color-primary-strong: #163d70;
+  --color-primary-soft: #e3ecf8;
+  --color-price: #9a6a0b;        /* prices and totals only */
+  --color-bg: #edf0f4;
+  --color-surface: #ffffff;
+  --color-border: #d5dbe3;
+  --color-border-strong: #b7c1ce;
+
+  /* States (orders, alerts) */
+  --color-success: #1f7a4d;
+  --color-success-soft: #e2f3ea;
+  --color-warning: #8a5a00;
+  --color-warning-soft: #fbf0d9;
+  --color-danger: #b42318;
+  --color-danger-soft: #fbe6e4;
+  --color-info: #1d4f91;
+  --color-info-soft: #e3ecf8;
+  --color-neutral-soft: #e8ebf0;
+
+  /* Type: one family, a modular scale (1.25) */
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --text-xs: 0.8rem;
+  --text-sm: 0.9rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.563rem;
+  --text-2xl: 1.953rem;
+  --text-3xl: 2.441rem;
+  --leading-tight: 1.2;
+  --leading-body: 1.55;
+
+  /* Space: 4 px base */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  /* Shape */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+  --focus-ring: 0 0 0 3px rgba(29, 79, 145, 0.35);
+
+  --content-width: 72rem;
+}
