@@ -2,7 +2,7 @@
 // Customers never call this module: the pages only use it when the viewer is an admin,
 // and user-service checks the role again on every request.
 import { http } from './http';
-import type { UserOut } from './types';
+import type { Role, UserOut } from './types';
 
 /** Largest number of ids GET /users?ids= accepts */
 export const MAX_USER_IDS = 100;
@@ -19,4 +19,18 @@ export async function getUsersByIds(ids: readonly number[], signal?: AbortSignal
     throw new Error(`getUsersByIds needs between 1 and ${MAX_USER_IDS} ids`);
   }
   return (await http.get<UserOut[]>('/users', { query: { ids: unique.join(',') }, signal })).data;
+}
+
+/** GET /api/users?limit&offset (admin): plain list ordered by id, no total and no search */
+export async function listUsers(limit: number, offset: number, signal?: AbortSignal): Promise<UserOut[]> {
+  return (await http.get<UserOut[]>('/users', { query: { limit, offset }, signal })).data;
+}
+
+/** Fields an admin can change on ANOTHER account; the final value is sent, so repeating it is harmless */
+export type UserChange = { role: Role } | { is_active: boolean };
+
+/** PATCH /api/users/{id} (admin): 409 CANNOT_MODIFY_SELF or LAST_ACTIVE_ADMIN, 403 if no longer admin */
+export async function updateUser(id: number, change: UserChange, signal?: AbortSignal): Promise<UserOut> {
+  if (!Number.isInteger(id) || id < 1) throw new Error('user ids are positive integers');
+  return (await http.patch<UserOut>(`/users/${id}`, change, { signal })).data;
 }

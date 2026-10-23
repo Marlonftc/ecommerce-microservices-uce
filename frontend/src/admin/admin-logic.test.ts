@@ -145,3 +145,16 @@ describe('pending adjustments', () => {
       .toEqual(['delta', 'key', 'productId', 'reason', 'savedAt', 'userId']);
   });
 });
+
+describe('diagnosis data of operations', () => {
+  it('hides secret-looking fields at any depth and masks tokens in text', async () => {
+    const { payloadText, errorText, HIDDEN } = await import('./diagnostics');
+    const text = payloadText({ amount: '1.00', Authorization: 'x', list: [{ refresh_token: 'r' }], nested: { client_secret: 's', ok: true } });
+    expect(text).not.toMatch(/"x"|"r"|"s"/);
+    expect(text.match(new RegExp(HIDDEN.replace(/[[\]]/g, '\\$&'), 'g'))).toHaveLength(3);
+    expect(text).toContain('"amount": "1.00"');
+    expect(errorText('token: abc123 and password="hunter2" Bearer abc.def')).toBe(`token: ${HIDDEN} and password=${HIDDEN} Bearer ${HIDDEN}`);
+    expect(errorText(null)).toBe('');
+    expect(payloadText({ text: 'y'.repeat(5000) })).toMatch(/caracteres más\)$/);
+  });
+});

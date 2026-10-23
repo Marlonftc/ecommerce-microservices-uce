@@ -5,9 +5,9 @@ import { useAuth } from '../auth/AuthContext';
 // final authorization of every call stays in the microservices.
 const SECTIONS = [
   { title: 'Productos e inventario', text: 'Crear, editar, desactivar y reactivar productos; ajustar existencias y ver su historial.', to: '/admin/productos' },
-  { title: 'Operaciones pendientes', text: 'Revisar los pasos de las compras que el sistema reintenta y reintentar los fallidos.', to: null },
-  { title: 'Usuarios', text: 'Consultar las cuentas registradas, activarlas o desactivarlas y cambiar su rol.', to: null },
-  { title: 'Notificaciones de clientes', text: 'Consultar, en modo de solo lectura, los avisos enviados a los clientes.', to: null },
+  { title: 'Usuarios', text: 'Consultar las cuentas registradas, activarlas o desactivarlas y cambiar su rol.', to: '/admin/usuarios' },
+  { title: 'Operaciones pendientes', text: 'Revisar los pasos de las compras que el sistema reintenta y reintentar los fallidos.', to: '/admin/operaciones' },
+  { title: 'Notificaciones de clientes', text: 'Consultar, en modo de solo lectura, los avisos enviados a los clientes.', to: '/admin/notificaciones' },
 ];
 
 export function AdminHomePage() {

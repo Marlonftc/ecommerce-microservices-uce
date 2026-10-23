@@ -8,7 +8,10 @@ import { AccountPage } from './pages/AccountPage';
 import { AdminHomePage } from './pages/AdminHomePage';
 import { AdminProductEditPage } from './pages/admin/AdminProductEditPage';
 import { AdminProductNewPage } from './pages/admin/AdminProductNewPage';
+import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage';
+import { AdminOperationsPage } from './pages/admin/AdminOperationsPage';
 import { AdminProductsPage } from './pages/admin/AdminProductsPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { CartPage } from './pages/CartPage';
 import { CatalogPage } from './pages/CatalogPage';
 import { CheckoutPage } from './pages/CheckoutPage';
@@ -53,6 +56,9 @@ export function AppRoutes() {
                 <Route path="admin/productos" element={<AdminProductsPage />} />
                 <Route path="admin/productos/nuevo" element={<AdminProductNewPage />} />
                 <Route path="admin/productos/:productId" element={<AdminProductEditPage />} />
+                <Route path="admin/usuarios" element={<AdminUsersPage />} />
+                <Route path="admin/operaciones" element={<AdminOperationsPage />} />
+                <Route path="admin/notificaciones" element={<AdminNotificationsPage />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFoundPage />} />

@@ -55,6 +55,7 @@ npm run build       # compilación de producción en dist/
 | `/notificaciones` | Solo clientes; un administrador ve una página 403 |
 | `/admin` | Solo administradores; un cliente ve una página 403 |
 | `/admin/productos`, `/admin/productos/nuevo`, `/admin/productos/:id` | Solo administradores |
+| `/admin/usuarios`, `/admin/operaciones`, `/admin/notificaciones` | Solo administradores |
 
 - El inicio de sesión usa `POST /api/auth/login`; el perfil y el rol se toman siempre de
   `GET /api/users/me`. Mientras el perfil no se confirma, ninguna página protegida se muestra.
@@ -206,19 +207,41 @@ Solo administradores; product-service e inventory-service vuelven a comprobar el
   Un 409 «clave usada con otros datos» conserva el intento hasta que el administrador lo descarta
   tras revisar el historial.
 
+## Administración de usuarios, operaciones y notificaciones
+
+- **Pérdida de permisos**: un 403 en cualquier página de administración vuelve a consultar
+  `GET /api/users/me`. Si la cuenta ya no es administradora, la sesión se cierra con «Tus permisos
+  cambiaron» y no se hacen más llamadas administrativas; si lo sigue siendo, la página se recarga.
+- **Usuarios** (`GET /api/users?limit=20&offset=`, `PATCH /api/users/{id}`): user-service no
+  devuelve total ni permite buscar (limitación del MVP): se recorre por páginas y «Siguiente» se
+  activa cuando la página llega llena. Activar/desactivar y cambiar el rol piden confirmación en la
+  página y explican la decisión D11 (el token sigue valiendo hasta 30 min en los demás servicios). La
+  propia cuenta no tiene acciones. Un resultado incierto nunca se repite: «Comprobar estado» lee la
+  cuenta con `GET /api/users?ids=` y muestra su estado actual sin atribuirlo a esta solicitud.
+- **Operaciones pendientes** (`GET /api/admin/operations`, `POST …/{id}/retry`): filtros en la URL
+  (estado, tipo, tipo de error, pedido), 20 por página con total, bloqueo vigente («en proceso») y
+  diagnóstico desplegable. Solo se ofrece reintentar operaciones `FAILED` sin bloqueo; las
+  `PERMANENT` piden confirmación. order-service decide: un 409 `OPERATION_NOT_RETRYABLE` es
+  definitivo. Un reintento incierto no se repite: se leen otra vez las operaciones de ese pedido.
+  El diagnóstico (`payload`, `last_error`) se muestra como texto, con campos de aspecto secreto y
+  tokens ocultos y longitud limitada.
+- **Notificaciones de clientes** (`GET /api/notifications` con token de administrador): solo
+  lectura; «leída» es el estado del cliente. Nombres con una sola consulta `?ids=` por página
+  (`useBuyers`), con «Cliente #ID» si user-service falla.
+
 ## Estructura
 
 | Carpeta | Contenido |
 |---|---|
-| `src/api/` | Cliente HTTP (`http.ts`), errores (`errors.ts`), tipos de los contratos reales (`types.ts`) y llamadas por servicio (`auth.ts`, `users.ts`, `products.ts`, `inventory.ts`, `cart.ts`, `orders.ts`, `notifications.ts`) |
+| `src/api/` | Cliente HTTP (`http.ts`), errores (`errors.ts`), tipos de los contratos reales (`types.ts`) y llamadas por servicio (`auth.ts`, `users.ts`, `products.ts`, `inventory.ts`, `cart.ts`, `orders.ts`, `notifications.ts`, `adminOperations.ts`) |
 | `src/auth/` | Sesión (`session.ts`), contexto (`AuthContext.tsx`), guardias de rutas (`guards.tsx`) y validación del registro |
 | `src/cart/` | Contexto del carrito (`CartContext.tsx`), clasificación de errores y validación de cantidades |
 | `src/orders/` | Checkout (`useCheckout.ts`), seguimiento de un pedido (`useOrderTracker.ts`), intentos pendientes (`pendingOps.ts`), compradores (`useBuyers.ts`), estados y errores |
 | `src/notifications/` | Contador de no leídas (`NotificationsContext.tsx`) |
-| `src/admin/` | Formulario de producto y sus reglas, comprobación de creación incierta, panel de inventario, ajustes pendientes y clasificación de errores |
+| `src/admin/` | Formulario de producto y sus reglas, comprobación de creación incierta, panel de inventario, ajustes pendientes, clasificación de errores, revalidación tras un 403 y diagnóstico seguro |
 | `src/catalog/` | Parámetros de la URL, disponibilidad y etiquetas de categorías |
 | `src/components/` | Layout y componentes: botón, panel, aviso, indicador de carga, estado vacío, etiqueta de estado, tarjeta de producto, disponibilidad, cantidad y paginación |
-| `src/pages/` | Páginas (`src/pages/admin/`: productos del administrador) |
+| `src/pages/` | Páginas (`src/pages/admin/`: productos, usuarios, operaciones y notificaciones del administrador) |
 | `src/styles/` | Variables de diseño, estilos base y de componentes (CSS propio) |
 | `src/utils/` | Formato de moneda y fechas (es-EC) y comparación exacta de importes |
 | `src/test/` | Utilidades de las pruebas (no se incluyen en la compilación) |
