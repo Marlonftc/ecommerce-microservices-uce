@@ -69,6 +69,9 @@ describe('order page', () => {
   });
 
   it('normal build: a single "Pagar" that sends APPROVE explicitly; no demonstration options', async () => {
+    // Set explicitly: Vite also reads VITE_* from the shell, so a VITE_PAYMENT_DEMO=true left in the
+    // terminal must not turn this into a demonstration build (restored by unstubAllEnvs in afterEach)
+    vi.stubEnv('VITE_PAYMENT_DEMO', '');
     api.on('POST', PAY, () => json(200, order({ status: 'PAID', inventory_status: 'CONFIRMED' })));
     renderAt(`/pedidos/${ORDER_ID}`);
     await screen.findByRole('heading', { name: 'Pedido 0B9A6C1E' });
@@ -98,6 +101,7 @@ describe('order page', () => {
   });
 
   it('a saved REJECT attempt is repeated with REJECT even in a build without the demonstration options', async () => {
+    vi.stubEnv('VITE_PAYMENT_DEMO', ''); // normal build, whatever the shell has
     savePayment({ userId: 7, orderId: ORDER_ID, key: 'demo-key', simulation: 'REJECT' });
     api.on('POST', PAY, () => json(200, order({ status: 'PAYMENT_REJECTED', inventory_status: 'RELEASED' })));
     renderAt(`/pedidos/${ORDER_ID}`);
@@ -346,7 +350,8 @@ describe('orders list', () => {
     api.on('GET', '/api/orders', () => page([order(), order({ id: OTHER_ORDER_ID, status: 'PAID', inventory_status: 'CONFIRMED' })]));
     renderAt('/pedidos');
     expect(await screen.findByRole('heading', { name: 'Mis pedidos' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Pedido 0B9A6C1E' }).getAttribute('href')).toBe(`/pedidos/${ORDER_ID}`);
+    // The heading is shown while the orders load: wait for the rows themselves
+    expect((await screen.findByRole('link', { name: 'Pedido 0B9A6C1E' })).getAttribute('href')).toBe(`/pedidos/${ORDER_ID}`);
     expect(screen.getByText('Pagado')).toBeTruthy();
     expect(screen.getAllByText('$1.519,48')).toHaveLength(2);
   });
@@ -357,7 +362,7 @@ describe('orders list', () => {
       page([order({ user_id: 7 }), order({ id: OTHER_ORDER_ID, user_id: 1 })], 25, Number(url.searchParams.get('page'))));
     renderAt('/pedidos?pagina=2');
     expect(await screen.findByRole('heading', { name: 'Pedidos de todos los clientes' })).toBeTruthy();
-    expect(screen.getByText(/Cliente #7/)).toBeTruthy();
+    expect(await screen.findByText(/Cliente #7/)).toBeTruthy();
     expect(screen.getByText(/Tuyo/)).toBeTruthy();
     expect(screen.getByText('Página 2 de 3')).toBeTruthy();
     const call = api.callsTo('GET /api/orders').at(-1)!;
