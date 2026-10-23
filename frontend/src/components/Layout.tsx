@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useCart } from '../cart/CartContext';
+import { useNotifications } from '../notifications/NotificationsContext';
 
 function BrandMark() {
   return (
@@ -29,6 +30,44 @@ function CartLink() {
   );
 }
 
+function BellIcon() {
+  return (
+    <svg className="site-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Zm4 4a2 2 0 0 0 4 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Bell of a customer with the unread count; an unknown count (error) is never shown as 0 */
+function NotificationsLink() {
+  const { status, unread } = useNotifications();
+  let label = 'Notificaciones';
+  if (status === 'error') label = 'Notificaciones (no se pudo consultar cuántas hay sin leer)';
+  else if (unread !== null) label = `Notificaciones, ${unread} sin leer`;
+  return (
+    <NavLink to="/notificaciones" className="site-nav__link site-nav__bell" aria-label={label} title={label}>
+      <BellIcon />
+      {unread !== null && unread > 0 && (
+        <span className="site-nav__count" aria-hidden="true">
+          {unread > 99 ? '99+' : unread}
+        </span>
+      )}
+      {status === 'error' && (
+        <span className="site-nav__count site-nav__count--unknown" aria-hidden="true">
+          ?
+        </span>
+      )}
+    </NavLink>
+  );
+}
+
 function SessionNav() {
   const { status, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -40,6 +79,7 @@ function SessionNav() {
         <NavLink to="/pedidos" className="site-nav__link">
           {user.role === 'admin' ? 'Pedidos' : 'Mis pedidos'}
         </NavLink>
+        {user.role === 'customer' && <NotificationsLink />}
         <NavLink to="/cuenta" className="site-nav__link">
           Mi cuenta
         </NavLink>

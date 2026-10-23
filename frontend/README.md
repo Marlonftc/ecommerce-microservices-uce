@@ -52,6 +52,7 @@ npm run build       # compilación de producción en dist/
 | `/login`, `/registro` | Solo sin sesión; con sesión se redirige |
 | `/cuenta`, `/carrito`, `/checkout` | Cualquier usuario con sesión (cliente o administrador) |
 | `/pedidos`, `/pedidos/:id` | Con sesión. Un administrador ve los pedidos de todos, pero solo paga o cancela los suyos |
+| `/notificaciones` | Solo clientes; un administrador ve una página 403 |
 | `/admin` | Solo administradores; un cliente ve una página 403 |
 
 - El inicio de sesión usa `POST /api/auth/login`; el perfil y el rol se toman siempre de
@@ -147,14 +148,39 @@ registra payment-service.
 reserva pendiente nunca se presenta como hecha. El plazo de pago (15 min) se muestra con una cuenta
 regresiva orientativa: decide la hora del servidor.
 
+**Textos según quién mira**: se decide comparando `user_id` del pedido con el usuario, no por el rol
+(un administrador también compra). Un pedido cancelado por su dueño dice «Lo cancelaste tú» a él y
+«Lo canceló el cliente» a un administrador.
+
+**Comprador** (solo administradores): order-service guarda únicamente `user_id`. El nombre y el correo
+se piden a user-service con **una sola** consulta `GET /api/users?ids=` por página (ids únicos, sin el
+propio administrador). Si user-service falla o un usuario no existe, se muestra «Cliente #ID» y los
+pedidos se ven igual. Un cliente nunca llama a esta ruta.
+
+## Notificaciones
+
+Solo para clientes: notification-service devuelve a un administrador las notificaciones de todos los
+clientes, por lo que no tiene campana (su vista de solo lectura llega en la etapa 5C).
+
+- **Campana**: cuenta las no leídas con el campo `total` de
+  `GET /api/notifications?unread_only=true&size=1`. Se actualiza al iniciar la sesión, al abrir
+  pedidos o notificaciones, cuando un pedido propio llega a un estado final, al marcar una como leída,
+  cada 60 s con la pestaña visible y al volver a la pestaña. Nunca hay dos lecturas a la vez; al cerrar
+  sesión o cambiar de usuario se cancelan temporizadores y respuestas pendientes. Si la consulta falla
+  muestra «?», nunca 0.
+- **`/notificaciones`**: 20 por página, filtro «Solo no leídas» (`?no_leidas=1`), «Marcar como leída»
+  (`PATCH /api/notifications/{id}/read`) y enlace al pedido. Títulos y mensajes vienen del servicio y
+  se muestran como texto, nunca como HTML.
+
 ## Estructura
 
 | Carpeta | Contenido |
 |---|---|
-| `src/api/` | Cliente HTTP (`http.ts`), errores (`errors.ts`), tipos de los contratos reales (`types.ts`) y llamadas por servicio (`auth.ts`, `products.ts`, `inventory.ts`, `cart.ts`, `orders.ts`) |
+| `src/api/` | Cliente HTTP (`http.ts`), errores (`errors.ts`), tipos de los contratos reales (`types.ts`) y llamadas por servicio (`auth.ts`, `users.ts`, `products.ts`, `inventory.ts`, `cart.ts`, `orders.ts`, `notifications.ts`) |
 | `src/auth/` | Sesión (`session.ts`), contexto (`AuthContext.tsx`), guardias de rutas (`guards.tsx`) y validación del registro |
 | `src/cart/` | Contexto del carrito (`CartContext.tsx`), clasificación de errores y validación de cantidades |
-| `src/orders/` | Checkout (`useCheckout.ts`), seguimiento de un pedido (`useOrderTracker.ts`), intentos pendientes (`pendingOps.ts`), estados y errores |
+| `src/orders/` | Checkout (`useCheckout.ts`), seguimiento de un pedido (`useOrderTracker.ts`), intentos pendientes (`pendingOps.ts`), compradores (`useBuyers.ts`), estados y errores |
+| `src/notifications/` | Contador de no leídas (`NotificationsContext.tsx`) |
 | `src/catalog/` | Parámetros de la URL, disponibilidad y etiquetas de categorías |
 | `src/components/` | Layout y componentes: botón, panel, aviso, indicador de carga, estado vacío, etiqueta de estado, tarjeta de producto, disponibilidad, cantidad y paginación |
 | `src/pages/` | Páginas |

@@ -12,9 +12,11 @@ import { Alert, ErrorAlert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { ExpiryCountdown, OrderItemsTable, OrderStatusBadge } from '../components/OrderParts';
 import { Spinner } from '../components/Spinner';
+import { useNotifications } from '../notifications/NotificationsContext';
 import { classifyPaymentError, extraString } from '../orders/orderErrors';
 import { SIMULATION_LABELS, canCancel, canPay, describeOrder, isOwner, releaseText, shortId } from '../orders/orderStatus';
 import { clearPayment, getPayment, newKey, savePayment, type PendingPayment } from '../orders/pendingOps';
+import { useBuyers } from '../orders/useBuyers';
 import { useOrderTracker, type OrderTracker } from '../orders/useOrderTracker';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { NotFoundPage } from './NotFoundPage';
@@ -36,15 +38,23 @@ function OrderDetail({ orderId }: { orderId: string }) {
   const tracker = useOrderTracker(orderId);
   const { user } = useAuth();
   const { reload: reloadCart } = useCart();
+  const { refresh: refreshNotifications } = useNotifications();
   const order = tracker.order;
+  const owner = order !== null && isOwner(order, user?.id);
+  // Name and email of the customer, only for an admin looking at someone else's order
+  const buyers = useBuyers(order && !owner ? [order.user_id] : [], user?.role === 'admin');
 
-  // The cart changes on the server when an order ends (emptied when PAID, unlocked otherwise)
+  // The cart changes on the server when an order ends (emptied when PAID, unlocked otherwise),
+  // and order-service sends the notification of the result in the same request
   const lastStatus = useRef<string | null>(null);
   useEffect(() => {
     if (!order) return;
-    if (lastStatus.current !== null && lastStatus.current !== order.status && FINAL.has(order.status)) void reloadCart();
+    if (lastStatus.current !== null && lastStatus.current !== order.status && FINAL.has(order.status)) {
+      void reloadCart();
+      refreshNotifications({ force: true });
+    }
     lastStatus.current = order.status;
-  }, [order, reloadCart]);
+  }, [order, reloadCart, refreshNotifications]);
 
   if (tracker.status === 'loading') {
     return (
@@ -73,8 +83,8 @@ function OrderDetail({ orderId }: { orderId: string }) {
     );
   }
 
-  const view = describeOrder(order);
-  const owner = isOwner(order, user?.id);
+  const view = describeOrder(order, owner);
+  const buyer = buyers.byId.get(order.user_id);
 
   return (
     <article className="order-detail">
@@ -93,7 +103,16 @@ function OrderDetail({ orderId }: { orderId: string }) {
 
       {!owner && (
         <Alert tone="info">
-          <p>Pedido del cliente #{order.user_id}. Como administrador puedes consultarlo, pero solo su dueño puede pagarlo o cancelarlo.</p>
+          <p>
+            {buyer ? (
+              <>
+                Pedido de <strong>{buyer.full_name}</strong> ({buyer.email}).
+              </>
+            ) : (
+              <>Pedido del cliente #{order.user_id}.</>
+            )}{' '}
+            Como administrador puedes consultarlo, pero solo su dueño puede pagarlo o cancelarlo.
+          </p>
         </Alert>
       )}
 
