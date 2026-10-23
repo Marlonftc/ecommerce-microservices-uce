@@ -54,6 +54,7 @@ npm run build       # compilación de producción en dist/
 | `/pedidos`, `/pedidos/:id` | Con sesión. Un administrador ve los pedidos de todos, pero solo paga o cancela los suyos |
 | `/notificaciones` | Solo clientes; un administrador ve una página 403 |
 | `/admin` | Solo administradores; un cliente ve una página 403 |
+| `/admin/productos`, `/admin/productos/nuevo`, `/admin/productos/:id` | Solo administradores |
 
 - El inicio de sesión usa `POST /api/auth/login`; el perfil y el rol se toman siempre de
   `GET /api/users/me`. Mientras el perfil no se confirma, ninguna página protegida se muestra.
@@ -172,6 +173,39 @@ clientes, por lo que no tiene campana (su vista de solo lectura llega en la etap
   (`PATCH /api/notifications/{id}/read`) y enlace al pedido. Títulos y mensajes vienen del servicio y
   se muestran como texto, nunca como HTML.
 
+## Administración de productos e inventario
+
+Solo administradores; product-service e inventory-service vuelven a comprobar el rol en cada llamada.
+
+- **Listado**: `GET /api/products?include_inactive=true` (activos e inactivos, búsqueda por nombre,
+  20 por página). Las existencias de la página llegan en **una sola** consulta `GET /api/inventory?ids=`.
+  Si inventory-service falla, los productos se muestran igual.
+- **Formulario**: las mismas reglas que product-service, que valida otra vez. SKU y categoría se
+  muestran como se guardarán (`LAP-003`, `ropa-deportiva`). El precio se trata **solo como texto**:
+  se acepta coma o punto, se rechazan los formatos ambiguos (`1.234`, `1.234,50`), más de 2 decimales,
+  0, negativos y más de 10 dígitos enteros, y se envía como `"899.90"`, nunca como número decimal.
+- **Crear** (`POST`, sin Idempotency-Key en el backend): un resultado incierto nunca se repite solo.
+  Se buscan por nombre los productos con ese SKU: si existe con los mismos datos, «sí se creó»; con
+  otros datos, no se considera propio; si se revisaron **todos** los resultados y no está, «no se
+  creó»; si la búsqueda falla o queda incompleta, el resultado sigue incierto. El SKU único impide
+  duplicados en un reintento controlado.
+- **Editar** (`PUT`, reemplazo completo): antes de guardar se relee el producto; si `updated_at`
+  cambió, se avisa y se pide cargar los datos actuales. Es una comprobación preventiva: entre esa
+  lectura y el `PUT` sigue existiendo un margen, porque product-service no controla versiones.
+- **Desactivar** (`DELETE`, lógico) con confirmación en la página; **reactivar** con `PUT is_active=true`
+  sobre los datos actuales. El inventario y los pedidos existentes se conservan.
+- **Inventario**: se distinguen registro con unidades, registro con 0 unidades, producto sin registro
+  (404 de inventory; el primer ajuste positivo lo crea) e inventario no disponible. Los ajustes son
+  **relativos** (agregar o quitar), nunca «fijar en N».
+- **Ajustes idempotentes**: usuario, producto, delta, motivo e `Idempotency-Key` se guardan en
+  `sessionStorage` antes de enviar (`ecommerce-uce.pending-adjustments`). Un resultado incierto se
+  repite con la misma clave y el mismo cuerpo, también tras recargar; mientras no se resuelve no se
+  puede iniciar otro ajuste de ese producto. «No se aplicó» solo ante respuestas definitivas de
+  inventory-service (409 sin unidades, 404, 422, 403 y su propio 503 cuando product-service no
+  responde). Cualquier otro 503, el 502/504 del gateway, un 500 o un error de red quedan inciertos.
+  Un 409 «clave usada con otros datos» conserva el intento hasta que el administrador lo descarta
+  tras revisar el historial.
+
 ## Estructura
 
 | Carpeta | Contenido |
@@ -181,9 +215,10 @@ clientes, por lo que no tiene campana (su vista de solo lectura llega en la etap
 | `src/cart/` | Contexto del carrito (`CartContext.tsx`), clasificación de errores y validación de cantidades |
 | `src/orders/` | Checkout (`useCheckout.ts`), seguimiento de un pedido (`useOrderTracker.ts`), intentos pendientes (`pendingOps.ts`), compradores (`useBuyers.ts`), estados y errores |
 | `src/notifications/` | Contador de no leídas (`NotificationsContext.tsx`) |
+| `src/admin/` | Formulario de producto y sus reglas, comprobación de creación incierta, panel de inventario, ajustes pendientes y clasificación de errores |
 | `src/catalog/` | Parámetros de la URL, disponibilidad y etiquetas de categorías |
 | `src/components/` | Layout y componentes: botón, panel, aviso, indicador de carga, estado vacío, etiqueta de estado, tarjeta de producto, disponibilidad, cantidad y paginación |
-| `src/pages/` | Páginas |
+| `src/pages/` | Páginas (`src/pages/admin/`: productos del administrador) |
 | `src/styles/` | Variables de diseño, estilos base y de componentes (CSS propio) |
 | `src/utils/` | Formato de moneda y fechas (es-EC) y comparación exacta de importes |
 | `src/test/` | Utilidades de las pruebas (no se incluyen en la compilación) |

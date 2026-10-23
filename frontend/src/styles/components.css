@@ -1580,3 +1580,238 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* ---------- Admin: products and inventory ---------- */
+.admin-table {
+  overflow-x: auto;
+  margin-bottom: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.admin-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-table thead th {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  font-weight: 600;
+  background: #f6f8fb;
+}
+
+.admin-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-table__name {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-table__sku {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.admin-table__muted {
+  color: var(--color-muted);
+}
+
+.admin-products__search {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 40rem;
+}
+
+.admin-product__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.admin-product__layout > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.product-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.field__textarea {
+  min-height: 6rem;
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+}
+
+.inline-confirm {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.inline-confirm p {
+  margin: 0;
+}
+
+.inventory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.inventory-panel__figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.inventory-panel__figures dt {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.inventory-panel__figures dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.inventory-panel__figures div:last-child dd {
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.inventory-panel__note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.inventory-panel__subtitle {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-base);
+}
+
+.adjust-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.adjust-form__mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.adjust-form__mode legend {
+  width: 100%;
+  margin-bottom: var(--space-1);
+}
+
+@media (max-width: 1000px) {
+  .admin-product__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-table thead {
+    display: none;
+  }
+  .admin-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .admin-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .admin-table td {
+    padding: 0;
+    border: 0;
+  }
+  .admin-table td:first-child {
+    grid-column: 1 / -1;
+  }
+  .admin-table .num {
+    text-align: left;
+  }
+  .inventory-panel__figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.adjust-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.adjust-history li {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.adjust-history li:last-child {
+  border-bottom: 0;
+}
+
+.adjust-history p {
+  margin: 0;
+}
+
+.adjust-history__change {
+  font-size: var(--text-sm);
+}
+
+.adjust-history__up {
+  color: var(--color-success);
+}
+
+.adjust-history__down {
+  color: var(--color-danger);
+}
+
+.adjust-history__meta {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}

@@ -6,6 +6,9 @@ import { Layout } from './components/Layout';
 import { NotificationsProvider } from './notifications/NotificationsContext';
 import { AccountPage } from './pages/AccountPage';
 import { AdminHomePage } from './pages/AdminHomePage';
+import { AdminProductEditPage } from './pages/admin/AdminProductEditPage';
+import { AdminProductNewPage } from './pages/admin/AdminProductNewPage';
+import { AdminProductsPage } from './pages/admin/AdminProductsPage';
 import { CartPage } from './pages/CartPage';
 import { CatalogPage } from './pages/CatalogPage';
 import { CheckoutPage } from './pages/CheckoutPage';
@@ -47,6 +50,9 @@ export function AppRoutes() {
               </Route>
               <Route element={<RequireRole role="admin" />}>
                 <Route path="admin" element={<AdminHomePage />} />
+                <Route path="admin/productos" element={<AdminProductsPage />} />
+                <Route path="admin/productos/nuevo" element={<AdminProductNewPage />} />
+                <Route path="admin/productos/:productId" element={<AdminProductEditPage />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFoundPage />} />
