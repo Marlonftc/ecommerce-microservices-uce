@@ -19,6 +19,22 @@ En desarrollo, Vite reenvía `/api` al gateway sin quitar el prefijo. `GATEWAY_U
 Vite al arrancar; no es una variable `VITE_*` y no llega al navegador. Si no se define, se usa
 `http://127.0.0.1:8080`, el puerto por defecto de `compose.yaml`.
 
+### Modo demostración de pagos
+
+`VITE_PAYMENT_DEMO` es una variable **de compilación** de Vite: su valor queda fijado al compilar o al
+arrancar `npm run dev`. Solo el valor exacto `true` activa las opciones.
+
+```powershell
+$env:VITE_PAYMENT_DEMO = "true"   # en la misma terminal, antes de npm run dev o npm run build
+npm run dev
+Remove-Item Env:VITE_PAYMENT_DEMO  # para volver al modo normal (y reiniciar Vite)
+```
+
+Cuando el frontend se sirva desde Docker (etapa 6), cambiar este valor exige reconstruir la imagen.
+Ocultar las opciones **no es una restricción de seguridad**: es solo una decisión de la interfaz;
+order-service acepta cualquiera de los tres modos válidos de cualquier usuario autenticado. Un intento
+de pago ya iniciado conserva su modo original aunque el modo demostración se desactive.
+
 ## Comprobaciones
 
 ```powershell
@@ -34,7 +50,8 @@ npm run build       # compilación de producción en dist/
 | `/` | Pública |
 | `/productos`, `/productos/:id` | Públicas; agregar al carrito pide iniciar sesión |
 | `/login`, `/registro` | Solo sin sesión; con sesión se redirige |
-| `/cuenta`, `/carrito` | Cualquier usuario con sesión (cliente o administrador) |
+| `/cuenta`, `/carrito`, `/checkout` | Cualquier usuario con sesión (cliente o administrador) |
+| `/pedidos`, `/pedidos/:id` | Con sesión. Un administrador ve los pedidos de todos, pero solo paga o cancela los suyos |
 | `/admin` | Solo administradores; un cliente ve una página 403 |
 
 - El inicio de sesión usa `POST /api/auth/login`; el perfil y el rol se toman siempre de
@@ -93,13 +110,51 @@ memoria la última versión confirmada y nunca la escribe en `sessionStorage`.
 - Al cerrar sesión o cambiar de usuario se cancelan las solicitudes pendientes y se ignora
   cualquier respuesta tardía de la sesión anterior.
 
+## Pedidos y pagos
+
+**Checkout** (`POST /api/orders` con `Idempotency-Key` y `{cart_version}`):
+
+- Antes de enviar, el intento se guarda en `sessionStorage` (usuario, versión del carrito, clave y,
+  cuando se conoce, el id del pedido). Así un timeout, un error de red o una recarga repiten **la
+  misma solicitud con la misma clave**: el backend devuelve el mismo pedido y nunca crea otro. No se
+  guarda el token, contraseñas ni datos del perfil, y el registro se borra cuando el resultado se
+  conoce.
+- `202 RESERVING` (el inventario no respondió): el mismo POST se repite a los 2, 4 y 8 s, nunca dos a
+  la vez; después, un reintento manual. Si nadie lo repite, order-service lo cancela a los 2 minutos.
+- Timeout, error de red, 500 o errores del gateway: resultado incierto; se recupera con la clave
+  original. Solo un 503 enviado por order-service («catálogo no disponible») asegura que no se creó
+  ningún pedido.
+- `CART_CHANGED`, `CART_EMPTY`, `PRODUCT_NOT_AVAILABLE`, `INSUFFICIENT_STOCK` (el pedido queda
+  cancelado) y `CART_LOCKED` (enlace al pedido activo **propio**, también para un administrador).
+
+**Pago simulado** (`POST /api/orders/{id}/pay`). No se usan tarjetas ni dinero real; el pago lo
+registra payment-service.
+
+- Normalmente hay un único botón «Pagar», que envía `simulation: APPROVE` de forma explícita.
+- Con `VITE_PAYMENT_DEMO=true` aparece además el panel plegado «Opciones de demostración», con
+  aprobar, rechazar y aprobación lenta, para demostrar el rechazo y el pago resuelto por el worker.
+
+- El intento (clave y simulación) se guarda antes de enviar y se reutiliza hasta conocer el
+  resultado; después del primer intento la simulación no se puede cambiar.
+- `202 PAYMENT_PENDING`: se consulta `GET /api/orders/{id}` cada 3 s durante 2 minutos (el worker lo
+  resuelve); después, botón «Actualizar». Nunca se paga de nuevo con otra clave.
+- Resultado incierto: primero se consulta el pedido; si sigue en `PENDING_PAYMENT`, se ofrece
+  repetir con la misma clave y simulación.
+- Aprobado: `PAID`, carrito vacío. Rechazado: `PAYMENT_REJECTED`, carrito conservado.
+
+**Estados**: los seis de order-service. `EXPIRED` es un motivo de cancelación, no un estado. Un pedido
+`PAID` con inventario `RESERVED` se muestra como «falta confirmar las unidades», y una liberación de
+reserva pendiente nunca se presenta como hecha. El plazo de pago (15 min) se muestra con una cuenta
+regresiva orientativa: decide la hora del servidor.
+
 ## Estructura
 
 | Carpeta | Contenido |
 |---|---|
-| `src/api/` | Cliente HTTP (`http.ts`), errores (`errors.ts`), tipos de los contratos reales (`types.ts`) y llamadas por servicio (`auth.ts`, `products.ts`, `inventory.ts`, `cart.ts`) |
+| `src/api/` | Cliente HTTP (`http.ts`), errores (`errors.ts`), tipos de los contratos reales (`types.ts`) y llamadas por servicio (`auth.ts`, `products.ts`, `inventory.ts`, `cart.ts`, `orders.ts`) |
 | `src/auth/` | Sesión (`session.ts`), contexto (`AuthContext.tsx`), guardias de rutas (`guards.tsx`) y validación del registro |
 | `src/cart/` | Contexto del carrito (`CartContext.tsx`), clasificación de errores y validación de cantidades |
+| `src/orders/` | Checkout (`useCheckout.ts`), seguimiento de un pedido (`useOrderTracker.ts`), intentos pendientes (`pendingOps.ts`), estados y errores |
 | `src/catalog/` | Parámetros de la URL, disponibilidad y etiquetas de categorías |
 | `src/components/` | Layout y componentes: botón, panel, aviso, indicador de carga, estado vacío, etiqueta de estado, tarjeta de producto, disponibilidad, cantidad y paginación |
 | `src/pages/` | Páginas |

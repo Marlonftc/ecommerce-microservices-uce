@@ -37,6 +37,9 @@ function SessionNav() {
     return (
       <>
         <CartLink />
+        <NavLink to="/pedidos" className="site-nav__link">
+          {user.role === 'admin' ? 'Pedidos' : 'Mis pedidos'}
+        </NavLink>
         <NavLink to="/cuenta" className="site-nav__link">
           Mi cuenta
         </NavLink>

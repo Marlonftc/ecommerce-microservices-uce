@@ -7,9 +7,12 @@ import { AccountPage } from './pages/AccountPage';
 import { AdminHomePage } from './pages/AdminHomePage';
 import { CartPage } from './pages/CartPage';
 import { CatalogPage } from './pages/CatalogPage';
+import { CheckoutPage } from './pages/CheckoutPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { OrderDetailPage } from './pages/OrderDetailPage';
+import { OrdersPage } from './pages/OrdersPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { RegisterPage } from './pages/RegisterPage';
 
@@ -31,6 +34,9 @@ export function AppRoutes() {
           <Route element={<RequireAuth />}>
             <Route path="cuenta" element={<AccountPage />} />
             <Route path="carrito" element={<CartPage />} />
+            <Route path="checkout" element={<CheckoutPage />} />
+            <Route path="pedidos" element={<OrdersPage />} />
+            <Route path="pedidos/:orderId" element={<OrderDetailPage />} />
             <Route element={<RequireRole role="admin" />}>
               <Route path="admin" element={<AdminHomePage />} />
             </Route>

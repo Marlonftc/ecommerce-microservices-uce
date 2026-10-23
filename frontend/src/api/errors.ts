@@ -53,6 +53,8 @@ export class ApiError extends Error {
   /** Original text sent by the backend (English), for diagnosis only */
   readonly detail: string | null;
   readonly issues: ValidationIssue[];
+  /** Other fields of a coded error, e.g. product_ids, order_id or status of a 409 */
+  readonly extra: Readonly<Record<string, unknown>>;
   /** X-Request-ID of the response: lets the request be found in the gateway log */
   readonly requestId: string | null;
   /** Seconds from the Retry-After header (429) */
@@ -65,6 +67,7 @@ export class ApiError extends Error {
     code?: string | null;
     detail?: string | null;
     issues?: ValidationIssue[];
+    extra?: Record<string, unknown>;
     requestId?: string | null;
     retryAfter?: number | null;
   }) {
@@ -75,6 +78,7 @@ export class ApiError extends Error {
     this.code = init.code ?? null;
     this.detail = init.detail ?? null;
     this.issues = init.issues ?? [];
+    this.extra = Object.freeze({ ...(init.extra ?? {}) });
     this.requestId = init.requestId ?? null;
     this.retryAfter = init.retryAfter ?? null;
   }
@@ -95,10 +99,10 @@ export class ApiError extends Error {
 
   /** Builds the error from a non-2xx response; body is the parsed JSON, a text or null */
   static fromResponse(status: number, body: unknown, requestId: string | null, retryAfter: string | null): ApiError {
-    const { code, detail, issues } = readDetail(body);
+    const { code, detail, issues, extra } = readDetail(body);
     const message = (code && MESSAGES_BY_CODE[code]) ?? MESSAGES_BY_STATUS[status] ?? `Error inesperado (HTTP ${status}).`;
     return new ApiError({
-      kind: 'http', message, status, code, detail, issues, requestId, retryAfter: parseRetryAfter(retryAfter),
+      kind: 'http', message, status, code, detail, issues, extra, requestId, retryAfter: parseRetryAfter(retryAfter),
     });
   }
 }
@@ -122,27 +126,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function readDetail(body: unknown): { code: string | null; detail: string | null; issues: ValidationIssue[] } {
+interface ParsedDetail {
+  code: string | null;
+  detail: string | null;
+  issues: ValidationIssue[];
+  extra: Record<string, unknown>;
+}
+
+function readDetail(body: unknown): ParsedDetail {
   if (!isRecord(body)) {
-    return { code: null, detail: typeof body === 'string' && body ? body.slice(0, 300) : null, issues: [] };
+    return { code: null, detail: typeof body === 'string' && body ? body.slice(0, 300) : null, issues: [], extra: {} };
   }
   const detail = body.detail;
   if (typeof detail === 'string') {
-    return { code: null, detail, issues: [] };
+    return { code: null, detail, issues: [], extra: {} };
   }
   if (Array.isArray(detail)) {
     const issues = detail.filter(isRecord).map((item) => ({
       field: Array.isArray(item.loc) ? item.loc.filter((p) => p !== 'body' && p !== 'query').join('.') : '',
       message: typeof item.msg === 'string' ? item.msg : 'Valor no válido',
     }));
-    return { code: null, detail: null, issues };
+    return { code: null, detail: null, issues, extra: {} };
   }
   if (isRecord(detail)) {
+    const { code, message, ...extra } = detail;
     return {
-      code: typeof detail.code === 'string' ? detail.code : null,
-      detail: typeof detail.message === 'string' ? detail.message : null,
+      code: typeof code === 'string' ? code : null,
+      detail: typeof message === 'string' ? message : null,
       issues: [],
+      extra,
     };
   }
-  return { code: null, detail: null, issues: [] };
+  return { code: null, detail: null, issues: [], extra: {} };
 }

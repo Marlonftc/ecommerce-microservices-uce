@@ -1,5 +1,5 @@
 // Cart page. Amounts (subtotals, estimated total) are always the ones calculated by
-// order-service; nothing is added up here. Checkout belongs to stage 4.
+// order-service; nothing is added up here.
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { CartItemOut } from '../api/types';
@@ -12,7 +12,19 @@ import { EmptyState } from '../components/EmptyState';
 import { QuantityInput } from '../components/QuantityInput';
 import { Spinner } from '../components/Spinner';
 import { StatusBadge } from '../components/StatusBadge';
+import { useActiveOrder } from '../orders/useActiveOrder';
 import { formatMoney } from '../utils/format';
+
+/** Link to the order that keeps the cart locked (the viewer's own active order) */
+function LockedOrderLink() {
+  const lookup = useActiveOrder(true);
+  if (lookup.status !== 'found') return null;
+  return (
+    <Link to={`/pedidos/${lookup.order.id}`} className="btn btn--secondary">
+      Ver mi compra en curso
+    </Link>
+  );
+}
 
 interface Notice {
   tone: 'success' | 'warning' | 'error';
@@ -70,6 +82,13 @@ export function CartPage() {
   const frozen = locked || cart.busy || cart.needsReload;
   const hasUnavailable = current.items.some((item) => item.available === false);
   const lines = current.items.length;
+  // The backend would refuse these carts anyway; say why before going on
+  const checkoutBlocked =
+    locked ? null
+    : !current.prices_available ? 'Para continuar necesitamos los precios del catálogo.'
+    : hasUnavailable ? 'Quita los productos que ya no están disponibles para continuar.'
+    : cart.needsReload || cart.busy ? 'Espera a que se confirme tu carrito.'
+    : null;
 
   const retryButton = (
     <Button variant="secondary" onClick={() => void reload()} loading={cart.refreshing}>
@@ -92,6 +111,7 @@ export function CartPage() {
         {locked && (
           <Alert tone="warning" title="Compra en curso">
             <p>{CART_MESSAGES.locked}</p>
+            <LockedOrderLink />
           </Alert>
         )}
         {cart.needsReload && (
@@ -164,6 +184,13 @@ export function CartPage() {
             <p className="cart-summary__note">
               Se calcula con los precios actuales del catálogo. El precio final se confirma al crear el pedido.
             </p>
+            {checkoutBlocked ? (
+              <p className="purchase-box__blocked">{checkoutBlocked}</p>
+            ) : (
+              <Link to="/checkout" className="btn btn--primary">
+                Continuar con la compra
+              </Link>
+            )}
             <Link to="/productos" className="btn btn--secondary">
               Seguir comprando
             </Link>
