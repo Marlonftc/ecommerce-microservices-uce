@@ -43,6 +43,30 @@ def restore_notification_service(customer) -> str:
     return request_id
 
 
+def daemon_time(stamp: str) -> tuple[str, int]:
+    """Timestamp written by "docker compose logs --timestamps" (RFC 3339 with up to 9 decimals,
+    trailing zeros removed) as a comparable (seconds, nanoseconds) pair."""
+    whole, _, fraction = stamp.rstrip("Z").partition(".")
+    return whole, int((fraction or "0").ljust(9, "0")[:9])
+
+
+def gateway_errors_after(request_id: str, since: str) -> list[str]:
+    """Error-log lines of the gateway written AFTER the access-log line of request_id.
+
+    Both kinds of line are ordered by the timestamps Docker itself gives them (nanoseconds,
+    same clock), not by the clock of this PC and not rounded to whole seconds. support.utc_now()
+    starts 1 s earlier and truncates to the second, so a window opened with it can contain up
+    to ~2 s of lines written BEFORE the moment it was taken."""
+    out = compose("logs", "--no-log-prefix", "--timestamps", "--since", since, "gateway").stdout
+    lines = []
+    for raw in out.splitlines():
+        stamp, _, text = raw.strip().partition(" ")
+        if stamp and text.strip():
+            lines.append((daemon_time(stamp), text.strip()))
+    anchor = next(t for t, text in lines if text.startswith("{") and f'"request_id":"{request_id}"' in text)
+    return [text for t, text in lines if t > anchor and not text.startswith("{")]
+
+
 def dns_lookup_inside_gateway() -> tuple[str, float | None, float]:
     """nslookup from the running gateway container. Returns the output, the time
     measured inside the container (ms, None if unavailable) and the time of the
@@ -96,9 +120,10 @@ def test_8_stopped_service_dns_update_and_recovery(customer):
                 assert r.json() == (UNAVAILABLE if r.status_code == 502 else TIMEOUT)
                 entry = log_entry(request_id)
                 seen.append((r.status_code, entry["upstream_addr"], entry["upstream_connect_time"]))
-                return entry["upstream_addr"] == GROUP
+                return request_id if entry["upstream_addr"] == GROUP else None
 
-            wait_until(updated, 40, interval=0.5, what="nginx to drop the old address")
+            # First request answered without the old address: the update is complete from here on
+            first_updated = wait_until(updated, 40, interval=0.5, what="nginx to drop the old address")
         print("during the change (status, upstream_addr, connect_time):")
         for row in seen:
             print("  ", row)
@@ -112,8 +137,10 @@ def test_8_stopped_service_dns_update_and_recovery(customer):
         assert any("notification-service could not be resolved (3: Host not found)" in e for e in errors), errors
         assert any("no live upstreams" in e for e in errors)
 
-        # 6. After the update: 15 s (more than valid=10s) without a single connection to the old address
-        update_done = utc_now()
+        # 6. After the update: 15 s (more than valid=10s) without a single connection to the old address.
+        # The window starts at the log line of the first updated request (see gateway_errors_after):
+        # a request sent before the update may still log its connect timeout to the old address
+        # just before that line, and that is not a new connection.
         ids = []
         with gw() as c:
             end = time.monotonic() + 15
@@ -126,7 +153,8 @@ def test_8_stopped_service_dns_update_and_recovery(customer):
                          interval=1, what="log lines")
         assert {log[i]["upstream_addr"] for i in ids} == {GROUP}
         assert {log[i]["upstream_status"] for i in ids} == {"502"}
-        late_errors = gateway_errors(update_done)
+        late_errors = gateway_errors_after(first_updated, since)
+        assert late_errors, "the error log after the update must not be empty (no live upstreams)"
         assert not [e for e in late_errors if f"{old_ip}:8000" in e], late_errors
         print(f"after the update: {len(ids)} requests, upstream_addr={GROUP}, "
               f"0 error-log lines with {old_ip}:8000")
@@ -166,6 +194,7 @@ def test_8_connection_refused_gives_json_502(customer):
         print(f"\nrefused: status={r.status_code} upstream_addr={entry['upstream_addr']} "
               f"upstream_status={entry['upstream_status']}")
         assert (r.status_code, r.json()) == (502, UNAVAILABLE)
+        assert "content-security-policy" in r.headers and r.headers["x-content-type-options"] == "nosniff"
         assert entry["upstream_status"] == "502"
         assert any("Connection refused" in e and sleeper_ip in e for e in gateway_errors(since))
     finally:
@@ -193,6 +222,7 @@ def test_9_frozen_service_gives_json_504(customer):
         print(f"\n504 after {elapsed:.1f} s: upstream_addr={entry['upstream_addr']} "
               f"upstream_status={entry['upstream_status']} connect_time={entry['upstream_connect_time']}")
         assert (r.status_code, r.json()) == (504, TIMEOUT)
+        assert r.headers["x-request-id"] == request_id and "content-security-policy" in r.headers
         assert 28 <= elapsed <= 40
         assert entry["upstream_connect_time"] != "-"      # connected: this is a read timeout
         assert "," not in entry["upstream_addr"]           # a single attempt, not repeated

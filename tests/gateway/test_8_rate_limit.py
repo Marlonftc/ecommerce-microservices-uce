@@ -31,6 +31,9 @@ def test_13_login_rate_limit():
                                              "message": "Too many login attempts, try again later"}}
         assert limited.headers["retry-after"] == "6"
         assert limited.headers["x-request-id"] == ids[-1]
+        # @rate_limited has its own add_header: the security headers are included again
+        assert "frame-ancestors 'none'" in limited.headers["content-security-policy"]
+        assert limited.headers["x-content-type-options"] == "nosniff"
 
         # Only login is limited: other routes, including register, keep working
         assert all(c.get("/api/products").status_code == 200 for _ in range(15))

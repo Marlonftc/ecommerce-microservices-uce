@@ -1,4 +1,4 @@
-/* Design tokens. System fonts only: the Content-Security-Policy allows no external sources. */
+/* Design tokens. System fonts only: the Content-Security-Policy of the gateway allows no external sources. */
 :root {
   /* Palette */
   --color-ink: #16233a;          /* header, headings, main text */

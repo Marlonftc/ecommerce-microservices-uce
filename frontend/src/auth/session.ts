@@ -1,7 +1,7 @@
 // Session kept in sessionStorage: only the token and its expiry time. It survives a
 // page reload but not closing the tab, and it is not shared between tabs. No password
 // or profile data is ever stored. Risk: a script injected in the page (XSS) could read
-// it; the Content-Security-Policy reduces that risk but does not remove it.
+// it; the Content-Security-Policy sent by the gateway reduces that risk but does not remove it.
 
 export const SESSION_KEY = 'ecommerce-uce.session';
 /** The session is considered expired this long before the real expiry */

@@ -30,7 +30,7 @@ npm run dev
 Remove-Item Env:VITE_PAYMENT_DEMO  # para volver al modo normal (y reiniciar Vite)
 ```
 
-Cuando el frontend se sirva desde Docker (etapa 6), cambiar este valor exige reconstruir la imagen.
+En Docker el valor se fija al construir la imagen (ver «Imagen Docker»): cambiarlo exige reconstruirla.
 Ocultar las opciones **no es una restricción de seguridad**: es solo una decisión de la interfaz;
 order-service acepta cualquiera de los tres modos válidos de cualquier usuario autenticado. Un intento
 de pago ya iniciado conserva su modo original aunque el modo demostración se desactive.
@@ -42,6 +42,42 @@ npm run typecheck   # TypeScript estricto
 npm run test        # Vitest
 npm run build       # compilación de producción en dist/
 ```
+
+## Imagen Docker
+
+`Dockerfile` multietapa:
+
+1. `node:22.23.3-alpine` instala las dependencias con `npm ci`, ejecuta `npm run typecheck` y compila
+   con `npm run build`.
+2. `nginxinc/nginx-unprivileged:1.28.0-alpine` sirve solo `dist/` y `nginx/default.conf`, como usuario
+   101 y en el puerto 8080. La imagen final no contiene Node, el código fuente, `node_modules`, las
+   pruebas ni secretos (`.dockerignore`).
+
+En `compose.yaml` el servicio `frontend` no publica puertos, solo está en `ecommerce-net`, tiene sistema de
+archivos de solo lectura (con `/tmp` en tmpfs), `cap_drop: ALL` y `no-new-privileges`. El navegador llega a
+él únicamente por el gateway: `http://127.0.0.1:<GATEWAY_PORT>/`.
+
+- **Navegación SPA**: cualquier ruta que no sea un archivo (`/login`, `/carrito`, `/pedidos/<id>`,
+  `/admin/usuarios`…) devuelve `index.html` y React Router muestra la página; una ruta inexistente muestra
+  la página «no encontrada» de la aplicación. Un archivo de `/assets/` que no existe da 404.
+- **Caché**: `/assets/*` (nombres con hash) se guarda un año (`immutable`); `index.html` usa `no-cache`, así
+  que tras un nuevo build el navegador carga los archivos nuevos.
+- **Cabeceras de seguridad y CSP**: las añade el gateway (decisión D21), no este contenedor.
+
+`VITE_PAYMENT_DEMO` se pasa como argumento de construcción:
+
+```powershell
+# Normal (por defecto false): sin opciones de demostración
+docker compose build frontend
+docker compose up -d frontend
+
+# Comprobar con qué valor se construyó la imagen: la salida incluye "uce.payment-demo":"false"
+docker image inspect ecommerce-uce/frontend --format '{{json .Config.Labels}}'
+```
+
+Para la demostración y las pruebas E2E, `compose.e2e.yaml` construye la imagen
+`ecommerce-uce/frontend:e2e` con `true`, sin sobrescribir la normal. Una variable `VITE_PAYMENT_DEMO` en la
+terminal tiene prioridad sobre `.env` también para Docker Compose.
 
 ## Sesión y roles
 
@@ -244,4 +280,6 @@ Solo administradores; product-service e inventory-service vuelven a comprobar el
 | `src/pages/` | Páginas (`src/pages/admin/`: productos, usuarios, operaciones y notificaciones del administrador) |
 | `src/styles/` | Variables de diseño, estilos base y de componentes (CSS propio) |
 | `src/utils/` | Formato de moneda y fechas (es-EC) y comparación exacta de importes |
-| `src/test/` | Utilidades de las pruebas (no se incluyen en la compilación) |
+| `src/test/` | Utilidades de las pruebas y su configuración común (`setup.ts`: esperas de hasta 3 s); no se incluyen en la compilación |
+| `Dockerfile`, `.dockerignore` | Imagen multietapa (Node compila, Nginx sin privilegios sirve) |
+| `nginx/default.conf` | Servidor estático: navegación SPA, caché de `/assets/` y `/healthz` |

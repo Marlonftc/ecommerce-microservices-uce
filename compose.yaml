@@ -364,6 +364,30 @@ services:
       - ecommerce-net
       - data-net
 
+  # ---------- Frontend (React) ----------
+  # Static files built at image build time and served by nginx without root.
+  # Reached only through the gateway: no published port, only ecommerce-net,
+  # no database, no credentials and no secrets.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Compile-time value written into the JavaScript bundle. "true" shows the
+        # simulated payment options; changing it requires building the image again.
+        VITE_PAYMENT_DEMO: ${VITE_PAYMENT_DEMO:-false}
+    image: ecommerce-uce/frontend
+    restart: always
+    read_only: true
+    tmpfs:
+      # nginx pid and temporary files
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - ecommerce-net
+
   # ---------- API Gateway ----------
   # Single entry point. Only ecommerce-net: it cannot reach PostgreSQL and
   # receives no database credentials, keys or secrets.
@@ -378,8 +402,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
-    # No depends_on: nginx starts even if a service is down (that route answers
-    # 502) and finds the services through Docker DNS when they appear
+    # No depends_on: nginx starts even if a service or the frontend is down (that
+    # route answers 502) and finds them through Docker DNS when they appear
     networks:
       - ecommerce-net
 

@@ -6,6 +6,8 @@ FROM nginx:1.28.0-alpine
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY conf.d/ /etc/nginx/conf.d/
+# Included by the server block, not loaded on its own (outside conf.d)
+COPY snippets/ /etc/nginx/snippets/
 
 EXPOSE 80
 
