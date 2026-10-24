@@ -1,8 +1,11 @@
-# Observabilidad local UCE · Etapa A
+# Observabilidad local UCE · Etapas A y B
 
 Grafana + Prometheus + Blackbox Exporter, en un proyecto Compose independiente llamado
 `uce-observability`. Observa seis microservicios, Gateway y frontend mediante HTTP.
-No incluye cAdvisor ni k6. Conserva los monitores de consola y Tkinter sin modificarlos.
+El dashboard de la Etapa A y sus sondas se conservan. La Etapa B añade el receptor interno de k6 y un
+dashboard independiente: [configuración y procedimiento](K6.md). La
+[primera prueba smoke](SMOKE_K6_20261024.md) confirmó recepción real sin modificar la plataforma. No incluye cAdvisor.
+El monitor de consola se conserva sin cambios. No ejecutar cargas ni recrear contenedores sin autorización.
 
 ## Ejecución en PowerShell
 
@@ -138,7 +141,8 @@ Estos son límites, no reservas ni consumos medidos. Grafana tuvo inicialmente 5
 tras observar aproximadamente 481 MiB durante la revisión del dashboard.
 Prometheus conserva hasta 24 h y aplica un límite de retención de 256 MB a bloques TSDB.
 El WAL, los bloques activos y la configuración ocupan espacio adicional: no es un límite absoluto del volumen.
-Se limita la concurrencia de consultas a cuatro y se guardan únicamente las métricas Blackbox utilizadas.
+Se limita la concurrencia de consultas a cuatro. El filtro del job Blackbox conserva sus métricas utilizadas;
+no filtra las series recibidas por Remote Write. En la Etapa B, k6 limita sus etiquetas en el origen.
 Las imágenes están fijadas: Grafana 13.2.4, Prometheus 3.15.1, Blackbox 0.29.1.
 
 ## Pruebas sin provocar caídas
@@ -182,4 +186,6 @@ Resultados reales de esta implementación: [VALIDACION.md](VALIDACION.md).
 - [Pruebas de reglas con promtool](https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/).
 - [Aprovisionamiento de Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/).
 
-La Etapa B (cAdvisor y k6) requiere autorización independiente.
+El receptor está activo y la primera prueba smoke terminó correctamente. Otras cargas y comparaciones
+requieren autorización adicional. Ver [K6.md](K6.md), [preparación](VALIDACION_K6.md) y
+[resultados smoke](SMOKE_K6_20261024.md). cAdvisor queda fuera de esta etapa.

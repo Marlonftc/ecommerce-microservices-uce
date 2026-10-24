@@ -57,7 +57,12 @@ class ObservabilityTests(unittest.TestCase):
         for forbidden in ("data-net", "docker.sock", "postgres-data", "k6:", "cadvisor:", "env_file:"):
             self.assertNotIn(forbidden, compose)
         self.assertNotIn("${", compose)
-        self.assertNotIn("--web.enable-remote-write-receiver", compose)
+        self.assertEqual(compose.count("--web.enable-remote-write-receiver"), 1)
+        prometheus = compose.split("  prometheus:\n", 1)[1].split("  grafana:\n", 1)[0]
+        self.assertIn("networks: [monitoring]", prometheus)
+        self.assertNotIn("ports:", prometheus)
+        self.assertIn("mem_limit: 384m", prometheus)
+        self.assertIn("--storage.tsdb.retention.time=24h", prometheus)
 
     def test_network_preflight_does_not_accept_another_network(self):
         with patch.object(checks, "command", return_value="wrong-network"):

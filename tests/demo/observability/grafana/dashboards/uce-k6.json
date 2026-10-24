@@ -1,0 +1,1475 @@
+{
+  "uid": "uce-k6",
+  "title": "UCE — Pruebas de carga k6",
+  "description": "Etapa B · k6 local por Remote Write",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "tags": [
+    "UCE",
+    "k6",
+    "etapa-b"
+  ],
+  "timezone": "America/Guayaquil",
+  "refresh": "5s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "## UCE · Pruebas de carga k6\nSeleccione una ejecución para consultar sus métricas y su identificación real.\n\nVentana móvil: **30 s**. Sin muestras suficientes aparece **Sin datos**. Una serie anterior no confirma actividad actual. El p95 temporal es aproximado; los umbrales y percentiles finales están en el JSON."
+      }
+    },
+    {
+      "id": 10,
+      "title": "Usuarios virtuales activos",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by(testid,load_scenario,product_replicas,measurement_kind) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"}) and on(testid) (max by(testid) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"} and ((time() - timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})) <= 15)))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#53657a"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 11,
+      "title": "Solicitudes / segundo · 30 s",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 6,
+        "y": 6,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s]))) and on() (count(max by(testid,load_scenario,product_replicas,measurement_kind) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"}) and on(testid) (max by(testid) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"} and ((time() - timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})) <= 15)))) > 0) unless on() (sum(count_over_time(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#53657a"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 12,
+      "title": "Latencia HTTP p95 · 30 s",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(1000 * histogram_quantile(0.95, sum(rate(k6_http_req_duration_seconds{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s])))) and on() (count(max by(testid,load_scenario,product_replicas,measurement_kind) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"}) and on(testid) (max by(testid) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"} and ((time() - timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})) <= 15)))) > 0) unless on() (sum(count_over_time(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#53657a"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 13,
+      "title": "Errores HTTP · 30 s",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 18,
+        "y": 6,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(100 * ((sum(rate(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\",expected_response=\"false\"}[30s])) or (0 * sum(rate(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s])))) / (sum(rate(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s])) > 0))) and on() (count(max by(testid,load_scenario,product_replicas,measurement_kind) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"}) and on(testid) (max by(testid) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"} and ((time() - timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})) <= 15)))) > 0) unless on() (sum(count_over_time(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#53657a"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 20,
+      "title": "Usuarios virtuales · ejecución seleccionada",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by(testid,load_scenario,product_replicas,measurement_kind) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"}) and on(testid) (max by(testid) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"} and ((time() - timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})) <= 15)))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Solicitudes por segundo · por fase",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s]))) and on(testid) (max by(testid) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"} and ((time() - timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "title": "Latencia HTTP p95 · por fase",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Histograma nativo agregado por fase; p95 estimado de los últimos 30 s, no p95 final del JSON.",
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(1000 * histogram_quantile(0.95, sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_req_duration_seconds{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s])))) and on(testid) (max by(testid) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"} and ((time() - timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "title": "Errores HTTP · por fase",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Solicitudes no esperadas / solicitudes observadas. No es un promedio de porcentajes.",
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(100 * ((sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\",expected_response=\"false\"}[30s])) or on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (0 * sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s])))) / (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s])) > 0))) and on(testid) (max by(testid) (k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"} and ((time() - timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\",phase=~\"${phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "title": "Última muestra k6 registrada",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 12,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * (max by(testid) (max_over_time(timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})[$__range:5s])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeAsLocal",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#53657a"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 25,
+      "title": "Antigüedad de la última muestra",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 12,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - (max by(testid) (max_over_time(timestamp(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"})[$__range:5s])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#53657a"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 26,
+      "title": "Identificación · valores del rango seleccionado",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Etiquetas reales. La presencia de un run_id histórico no significa que siga ejecutándose.",
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by(testid,load_scenario,product_replicas,measurement_kind,comparison_key) (last_over_time(k6_vus{testid=~\"${testid:regex}\",load_scenario=~\"${load_scenario:regex}\",product_replicas=~\"${product_replicas:regex}\",measurement_kind=\"${measurement_kind}\"}[$__range]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 30,
+      "title": "",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 5
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Comparación 1 vs. 3 réplicas\nUse el validador local de resultados para abrir una pareja con salidas 0, umbrales válidos y configuración compatible. Sin ese enlace los paneles permanecen vacíos. La pareja validada se identifica en las leyendas de las curvas.\n\nLas curvas conservan sus fechas reales y sus huecos. No reconstruyen históricos JSON, no alinean artificialmente fases y no prueban capacidad máxima. Seleccione solo sostenida o rampa; no mezcle calentamiento y preparación."
+      }
+    },
+    {
+      "id": 40,
+      "title": "Comparación · RPS · fechas reales",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "((sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s]))) and on(testid) (max by(testid) (k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"} and ((time() - timestamp(k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))) and on(comparison_key) (max by(comparison_key) (last_over_time(k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"}[$__range] @ end()))) and on() (vector(${comparison_checked:raw}) == 1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        },
+        {
+          "refId": "B",
+          "expr": "((sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s]))) and on(testid) (max by(testid) (k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"} and ((time() - timestamp(k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))) and on(comparison_key) (max by(comparison_key) (last_over_time(k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"}[$__range] @ end()))) and on() (vector(${comparison_checked:raw}) == 1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 41,
+      "title": "Comparación · p95 HTTP · fechas reales",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "((1000 * histogram_quantile(0.95, sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_req_duration_seconds{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s])))) and on(testid) (max by(testid) (k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"} and ((time() - timestamp(k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))) and on(comparison_key) (max by(comparison_key) (last_over_time(k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"}[$__range] @ end()))) and on() (vector(${comparison_checked:raw}) == 1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        },
+        {
+          "refId": "B",
+          "expr": "((1000 * histogram_quantile(0.95, sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_req_duration_seconds{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s])))) and on(testid) (max by(testid) (k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"} and ((time() - timestamp(k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))) and on(comparison_key) (max by(comparison_key) (last_over_time(k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"}[$__range] @ end()))) and on() (vector(${comparison_checked:raw}) == 1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 42,
+      "title": "Comparación · Errores HTTP · fechas reales",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "((100 * ((sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\",expected_response=\"false\"}[30s])) or on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (0 * sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s])))) / (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s])) > 0))) and on(testid) (max by(testid) (k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"} and ((time() - timestamp(k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))) and on(comparison_key) (max by(comparison_key) (last_over_time(k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"}[$__range] @ end()))) and on() (vector(${comparison_checked:raw}) == 1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        },
+        {
+          "refId": "B",
+          "expr": "((100 * ((sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\",expected_response=\"false\"}[30s])) or on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (0 * sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s])))) / (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (rate(k6_http_reqs_total{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s])) > 0))) and on(testid) (max by(testid) (k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"} and ((time() - timestamp(k6_vus{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"})) <= 15))) unless on(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (sum by(testid,load_scenario,product_replicas,measurement_kind,comparison_key,phase) (count_over_time(k6_http_reqs_total{testid=~\"${run_three:regex}\",load_scenario=\"scale\",product_replicas=\"3\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\",phase=~\"${compare_phase:regex}\",name=~\"${endpoint:regex}\"}[30s]) < 2))) and on(comparison_key) (max by(comparison_key) (last_over_time(k6_vus{testid=~\"${run_one:regex}\",load_scenario=\"scale\",product_replicas=\"1\",measurement_kind=\"benchmark\",comparison_key=~\"${compare_key:regex}\"}[$__range] @ end()))) and on() (vector(${comparison_checked:raw}) == 1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{testid}} · {{phase}} · {{product_replicas}} rép.",
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin datos",
+                  "color": "#53657a"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "measurement_kind",
+        "label": "Tipo de medición",
+        "type": "custom",
+        "query": "benchmark,integration_smoke",
+        "hide": 0,
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "text": "benchmark",
+          "value": "benchmark"
+        },
+        "options": [
+          {
+            "text": "benchmark",
+            "value": "benchmark",
+            "selected": true
+          },
+          {
+            "text": "integration_smoke",
+            "value": "integration_smoke",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "load_scenario",
+        "label": "Escenario",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "uce-prometheus"
+        },
+        "query": {
+          "query": "label_values(k6_vus{measurement_kind=\"$measurement_kind\"},load_scenario)",
+          "refId": "load_scenario"
+        },
+        "refresh": 2,
+        "sort": 2,
+        "multi": false,
+        "includeAll": false,
+        "options": [],
+        "current": {
+          "text": "Sin selección",
+          "value": "__none__"
+        }
+      },
+      {
+        "name": "product_replicas",
+        "label": "Réplicas",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "uce-prometheus"
+        },
+        "query": {
+          "query": "label_values(k6_vus{measurement_kind=\"$measurement_kind\",load_scenario=\"$load_scenario\"},product_replicas)",
+          "refId": "product_replicas"
+        },
+        "refresh": 2,
+        "sort": 2,
+        "multi": false,
+        "includeAll": true,
+        "options": [],
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "allValue": ".+"
+      },
+      {
+        "name": "testid",
+        "label": "Ejecución",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "uce-prometheus"
+        },
+        "query": {
+          "query": "label_values(k6_vus{measurement_kind=\"$measurement_kind\",load_scenario=\"$load_scenario\",product_replicas=~\"$product_replicas\"},testid)",
+          "refId": "testid"
+        },
+        "refresh": 2,
+        "sort": 2,
+        "multi": false,
+        "includeAll": false,
+        "options": [],
+        "current": {
+          "text": "Sin selección",
+          "value": "__none__"
+        }
+      },
+      {
+        "name": "phase",
+        "label": "Fases",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "uce-prometheus"
+        },
+        "query": {
+          "query": "label_values(k6_http_reqs_total{testid=\"$testid\"},phase)",
+          "refId": "phase"
+        },
+        "refresh": 2,
+        "sort": 2,
+        "multi": true,
+        "includeAll": true,
+        "options": [],
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "allValue": ".+"
+      },
+      {
+        "name": "endpoint",
+        "label": "Endpoint",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "uce-prometheus"
+        },
+        "query": {
+          "query": "label_values(k6_http_reqs_total{testid=\"$testid\"},name)",
+          "refId": "endpoint"
+        },
+        "refresh": 2,
+        "sort": 2,
+        "multi": true,
+        "includeAll": true,
+        "options": [],
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "allValue": ".+"
+      },
+      {
+        "name": "compare_key",
+        "label": "compare_key",
+        "type": "textbox",
+        "hide": 2,
+        "query": "__none__",
+        "current": {
+          "text": "__none__",
+          "value": "__none__"
+        },
+        "options": []
+      },
+      {
+        "name": "run_one",
+        "label": "run_one",
+        "type": "textbox",
+        "hide": 2,
+        "query": "__none__",
+        "current": {
+          "text": "__none__",
+          "value": "__none__"
+        },
+        "options": []
+      },
+      {
+        "name": "run_three",
+        "label": "run_three",
+        "type": "textbox",
+        "hide": 2,
+        "query": "__none__",
+        "current": {
+          "text": "__none__",
+          "value": "__none__"
+        },
+        "options": []
+      },
+      {
+        "name": "compare_phase",
+        "label": "Fase comparada",
+        "type": "custom",
+        "query": "sustained,ramp",
+        "hide": 0,
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "text": "sustained",
+          "value": "sustained"
+        },
+        "options": [
+          {
+            "text": "sustained",
+            "value": "sustained",
+            "selected": true
+          },
+          {
+            "text": "ramp",
+            "value": "ramp",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "comparison_checked",
+        "label": "Validación local",
+        "type": "custom",
+        "query": "0,1",
+        "hide": 2,
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "text": "0",
+          "value": "0"
+        },
+        "options": [
+          {
+            "text": "0",
+            "value": "0",
+            "selected": true
+          },
+          {
+            "text": "1",
+            "value": "1",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  }
+}

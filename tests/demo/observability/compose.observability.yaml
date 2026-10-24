@@ -1,4 +1,4 @@
-# Stage A only. Start as its own Compose project with --env-file compose.vars.
+# HTTP probes plus internal k6 Remote Write. Use --env-file compose.vars.
 name: uce-observability
 
 services:
@@ -27,6 +27,7 @@ services:
     image: prom/prometheus:v3.15.1
     command:
       - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
       - --storage.tsdb.path=/prometheus
       - --storage.tsdb.retention.time=24h
       - --storage.tsdb.retention.size=256MB

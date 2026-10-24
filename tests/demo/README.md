@@ -8,7 +8,9 @@ Ninguna prueba borra datos. **Nunca uses `docker compose down -v`.**
 Grafana es la **interfaz gráfica principal**: abre [el dashboard local](http://127.0.0.1:3000/d/uce-stage-a).
 La Etapa A muestra disponibilidad, historial y tiempos de las sondas HTTP de los seis microservicios,
 el Gateway y el frontend. Su configuración y ejecución independiente están en
-[observability/README.md](observability/README.md). Todavía no incorpora métricas k6 ni de contenedores.
+[observability/README.md](observability/README.md). La integración k6 tiene un dashboard separado:
+[Etapa B](observability/K6.md), con receptor activo y
+[primer smoke de integración verificado](observability/SMOKE_K6_20261024.md). No incluye cAdvisor ni benchmarks nuevos.
 
 Durante la defensa, usa una terminal para los comandos y el navegador para Grafana y la tienda.
 Los pasos de escalado, parada o carga de este guion se ejecutan manualmente cuando corresponda;
@@ -102,7 +104,8 @@ El monitor no reinicia, detiene, escala ni repara contenedores y no verifica el 
 
 `monitor_history.py` se conserva como módulo reutilizable, cubierto por `test_monitor.py`.
 **La consola no muestra estos históricos y Grafana todavía no consume directamente sus JSON.**
-No hay una integración k6 en tiempo real implementada en esta etapa.
+La integración en tiempo real usa Remote Write, no esos JSON; el receptor y el primer smoke ya se
+verificaron. Otras cargas requieren autorización. Ver [K6.md](observability/K6.md).
 
 `load_runs()` lee `tests/load/results/` sin modificarla y asocia `<run_id>.json` con `<run_id>-env.json`,
 comprobando identificador y escenario. Devuelve ejecuciones y avisos de archivos incompletos o inválidos;

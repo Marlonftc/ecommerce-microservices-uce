@@ -3,7 +3,9 @@
 Estado: propuesta documentada, **no ejecutada ni incorporada al despliegue**. No se cambió `compose.yaml`,
 `compose.load.yaml` ni `tests/load/run_load.py`. Grafana es la interfaz gráfica principal de la plataforma;
 la Etapa A supervisa sondas HTTP y todavía no integra métricas k6. Esta alternativa permite observar una
-prueba k6 en tiempo real cuando el autor decida ejecutarla, sin implementar la Etapa B.
+prueba k6 en tiempo real cuando el autor decida ejecutarla. La [Etapa B](observability/K6.md) implementa
+por separado Remote Write hacia Grafana; el receptor está activo y el primer smoke fue verificado.
+El dashboard nativo descrito en este documento sigue siendo una alternativa documentada sin ejecutar.
 
 El monitor de consola es opcional y `monitor_history.py` se conserva como lector reutilizable de resultados
 anteriores. La consola no muestra esos históricos y Grafana todavía no consume directamente sus JSON.

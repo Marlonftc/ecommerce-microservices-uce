@@ -1,0 +1,29 @@
+# Standalone opt-in integration check. Never include the application's Compose.
+name: uce-k6-smoke
+services:
+  k6-smoke:
+    image: grafana/k6:1.0.0
+    profiles: [integration]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 0.25
+    pids_limit: 64
+    tmpfs:
+      - /tmp:size=16m
+    environment:
+      BASE_URL: http://gateway
+      RESULTS_DIR: /results
+      K6_NO_USAGE_REPORT: "true"
+    volumes:
+      - ../../load:/scripts:ro
+      - ../../load/results/smoke:/results
+    networks: [application, monitoring]
+networks:
+  application:
+    external: true
+    name: ecommerce-uce_ecommerce-net
+  monitoring:
+    external: true
+    name: uce-observability_monitoring
