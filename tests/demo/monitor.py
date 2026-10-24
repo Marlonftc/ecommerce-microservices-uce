@@ -1,163 +1,83 @@
-"""Live monitor for demonstrations: what the system is doing, refreshed every second.
+"""Read-only terminal view of the shared demonstration monitor.
 
-Shows, through the gateway (the only published port), like any client:
-- the state of each microservice and of the frontend (UP / DOWN, HTTP code, time),
-- how the gateway distributes the catalogue requests among the product-service
-  replicas (header X-Instance, last 60 requests), as a bar chart,
-- requests per second, errors and response times (p50 / p95) of the catalogue,
-- the containers of each service according to Docker Compose (running / healthy).
-
-It only reads: it creates no data, uses no credentials and changes nothing.
-Run it in its own window during a load test, a scale-out or a stopped service:
-
-    backend\\order-service\\.venv\\Scripts\\python.exe tests\\demo\\monitor.py
-    (Ctrl+C to stop)
+Example:
+    python tests/demo/monitor.py --gateway http://127.0.0.1:8090
+    Ctrl+C exits. Extra synthetic traffic is paused by default.
 """
-import json
 import os
-import subprocess
-import threading
+import sys
 import time
-from collections import Counter, deque
-from pathlib import Path
 
-import httpx2
-from dotenv import dotenv_values
+from monitor_core import Collector, SERVICES, arguments, docker_status, validate_args
 
-ROOT = Path(__file__).resolve().parents[2]
-PORT = os.environ.get("GATEWAY_PORT") or dotenv_values(ROOT / ".env").get("GATEWAY_PORT") or "8080"
-GATEWAY = f"http://127.0.0.1:{PORT}"
-
-# A route of each service that answers without a token: any answer except the gateway's own
-# 502/504 means the gateway reaches the service (401 is the service itself asking for a token)
-PROBES = {
-    "frontend": "/",
-    "user-service": "/api/users/me",
-    "product-service": "/api/products?limit=1",
-    "inventory-service": "/api/inventory/1",
-    "order-service": "/api/cart",
-    "payment-service": "/api/payments",
-    "notification-service": "/api/notifications",
-}
-COMPOSE_SERVICES = ["gateway", "frontend", "user-service", "product-service", "inventory-service", "order-service",
-                    "order-worker", "payment-service", "notification-service", "postgres"]
-
-GREEN, RED, YELLOW, DIM, BOLD, RESET = "\x1b[32m", "\x1b[31m", "\x1b[33m", "\x1b[2m", "\x1b[1m", "\x1b[0m"
-
-catalogue = deque(maxlen=60)          # (time, instance or None, status, seconds)
-lock = threading.Lock()
-containers: dict[str, list[tuple[str, str]]] = {}
+COLORS = {"UP": "\x1b[32m", "DOWN": "\x1b[31m", "DEGRADED": "\x1b[33m", "UNKNOWN": "\x1b[90m"}
+RESET = "\x1b[0m"
 
 
-def catalogue_traffic(stop: threading.Event) -> None:
-    """About 5 catalogue requests per second, like a light visitor; the load comes from k6."""
-    with httpx2.Client(base_url=GATEWAY, timeout=10) as client:
-        while not stop.is_set():
-            start = time.monotonic()
-            try:
-                r = client.get("/api/products", params={"limit": 1})
-                entry = (time.time(), r.headers.get("x-instance"), r.status_code, time.monotonic() - start)
-            except Exception:
-                entry = (time.time(), None, 0, time.monotonic() - start)
-            with lock:
-                catalogue.append(entry)
-            stop.wait(0.2)
+def value(number):
+    return "—" if number is None else f"{number:.1f}"
 
 
-def docker_state(stop: threading.Event) -> None:
-    """Containers per service, every 3 s (optional: skipped if docker is not available)."""
-    while not stop.is_set():
-        try:
-            out = subprocess.run(["docker", "compose", "ps", "-a", "--format", "json"], cwd=ROOT,
-                                 capture_output=True, text=True, timeout=10).stdout.strip()
-            rows = json.loads(out) if out.startswith("[") else [json.loads(x) for x in out.splitlines() if x.strip()]
-            state: dict[str, list[tuple[str, str]]] = {}
-            for row in rows:
-                state.setdefault(row.get("Service", "?"), []).append((row.get("State", "?"), row.get("Health", "")))
-            with lock:
-                containers.clear()
-                containers.update(state)
-        except Exception:
-            pass
-        stop.wait(3)
-
-
-def probe(client: httpx2.Client, path: str) -> tuple[str, int, float]:
-    start = time.monotonic()
-    try:
-        r = client.get(path)
-        elapsed = time.monotonic() - start
-        if r.status_code in (502, 504):
-            return "DOWN", r.status_code, elapsed
-        return "UP", r.status_code, elapsed
-    except Exception:
-        return "DOWN", 0, time.monotonic() - start
-
-
-def percentile(values: list[float], p: float) -> float:
-    if not values:
-        return 0.0
-    ordered = sorted(values)
-    return ordered[min(len(ordered) - 1, int(round(p * (len(ordered) - 1))))]
-
-
-def render(probes: dict[str, tuple[str, int, float]]) -> str:
-    with lock:
-        recent = list(catalogue)
-        compose = {k: list(v) for k, v in containers.items()}
-    lines = [f"{BOLD}E-Commerce UCE · monitor en vivo{RESET}   gateway {GATEWAY}   {time.strftime('%H:%M:%S')}", ""]
-
-    lines.append(f"{BOLD}Servicios (a través del gateway){RESET}")
-    for name, (state, code, seconds) in probes.items():
-        color = GREEN if state == "UP" else RED
-        lines.append(f"  {name:22} {color}{state:5}{RESET} HTTP {code:3}  {seconds * 1000:6.0f} ms")
-
-    lines.append("")
-    lines.append(f"{BOLD}Reparto del catálogo entre réplicas de product-service{RESET} (últimas {len(recent)} peticiones)")
-    counts = Counter(instance for _, instance, status, _ in recent if status == 200 and instance)
-    total = sum(counts.values()) or 1
-    if not counts:
-        lines.append(f"  {RED}sin respuestas de product-service{RESET}")
-    for instance, n in sorted(counts.items()):
-        bar = "█" * max(1, round(40 * n / total))
-        lines.append(f"  {instance[:14]:14} {GREEN}{bar}{RESET} {n}")
-
-    window = [e for e in recent if e[0] >= time.time() - 10]
-    ok = [s for _, _, status, s in window if status == 200]
-    errors = len(window) - len(ok)
-    lines.append("")
-    lines.append(f"{BOLD}Catálogo, últimos 10 s{RESET}: {len(window) / 10:.1f} pet/s   "
-                 f"errores {RED if errors else GREEN}{errors}{RESET}   "
-                 f"p50 {percentile(ok, 0.5) * 1000:.0f} ms   p95 {percentile(ok, 0.95) * 1000:.0f} ms")
-
-    lines.append("")
-    lines.append(f"{BOLD}Contenedores (docker compose ps){RESET}")
-    if not compose:
-        lines.append(f"  {DIM}no disponible{RESET}")
-    for service in COMPOSE_SERVICES if compose else []:
-        rows = compose.get(service, [])
-        running = sum(1 for state, _ in rows if state == "running")
-        healthy = sum(1 for _, health in rows if health == "healthy")
-        color = GREEN if running and healthy == running else (YELLOW if running else RED)
-        lines.append(f"  {service:22} {color}{running} en ejecución, {healthy} healthy{RESET}")
-    lines.append("")
-    lines.append(f"{DIM}Solo lectura. Ctrl+C para salir.{RESET}")
+def render(data: dict, gateway: str, color: bool = True) -> str:
+    lines = [f"E-Commerce UCE · monitor local · {gateway} · {time.strftime('%H:%M:%S')}",
+             "HTTP y Docker son evidencias independientes. 401 esperado = ruta accesible, no salud completa.",
+             "", "Componente             HTTP       Docker       Código   ms       p50/60s  p95/60s  Edad"]
+    for name in SERVICES:
+        probe = data["probes"].get(name)
+        raw = data["raw"].get(name)
+        docker, _ = docker_status(data["containers"], name, data["docker_available"])
+        state = probe.state if probe else docker
+        measured = probe is not None and probe.state != "UNKNOWN"
+        _, p50, p95 = data["stats"].get(name, (0, None, None))
+        elapsed = f"{data['now'] - raw.at:.0f}s" if raw else "—"
+        tint, reset = (COLORS[state], RESET) if color else ("", "")
+        lines.append(f"{name:22} {tint}{probe.state if probe else '—':10}{reset} {docker:12} "
+                     f"{str(probe.code) if probe and probe.code is not None else '—':6} "
+                     f"{value(probe.ms if measured else None):8} {value(p50 if measured else None):8} "
+                     f"{value(p95 if measured else None):8} {elapsed}")
+    lines += ["", "Distribución sintética extra · últimos 10 s · NO es el tráfico total del sistema"]
+    if data["paused"] or not data["rate"]:
+        lines.append("PAUSADO (las sondas básicas siguen activas salvo pausa de todo HTTP)")
+    else:
+        for instance, count in sorted(data["counts"].items()):
+            lines.append(f"  {instance:16} {'█' * min(count, 40)} {count}")
+        if not data["counts"]:
+            lines.append("Sin respuestas recientes con X-Instance")
+        lines.append(f"{len(data['traffic'])} peticiones extra / 10 s · objetivo máximo {data['rate']:g} req/s")
+    lines += ["", data["docker_error"] or "Docker: lectura vigente" if data["docker_available"] else
+              "Docker: UNKNOWN / lectura ausente o desactualizada", "", "Últimas transiciones (duración desde detección):"]
+    for event in data["events"][-5:]:
+        recovery = "" if event.duration is None else f" · ~{event.duration:.0f} s"
+        lines.append(f"  {time.strftime('%d/%m %H:%M:%S', time.localtime(event.wall))} "
+                     f"{event.source} {event.service}: {event.before} → {event.after}{recovery}")
+    lines.append("\nSolo lectura · no lee .env · Ctrl+C para salir")
     return "\n".join(lines)
 
 
-def main() -> None:
-    os.system("")  # enables ANSI colours in the Windows console
-    stop = threading.Event()
-    for target in (catalogue_traffic, docker_state):
-        threading.Thread(target=target, args=(stop,), daemon=True).start()
+def main():
+    parser = arguments("Monitor UCE de consola: HTTP y Docker, sin leer .env")
+    parser.add_argument("--once", action="store_true", help="one bounded live snapshot, then exit")
+    args = parser.parse_args()
+    validate_args(parser, args)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if os.name == "nt":
+        os.system("")  # Enable ANSI colors on the Windows console.
+    collector = Collector(args.gateway, args.project, args.interval, args.timeout, rate=args.traffic_rate)
+    collector.start()
     try:
-        with httpx2.Client(base_url=GATEWAY, timeout=5) as client:
+        if args.once:
+            collector.stop_event.wait(args.timeout + 1.5)
+            print(render(collector.snapshot(), args.gateway, sys.stdout.isatty()), flush=True)
+        else:
             while True:
-                probes = {name: probe(client, path) for name, path in PROBES.items()}
-                print("\x1b[H\x1b[J" + render(probes), flush=True)
-                time.sleep(1)
+                print("\x1b[H\x1b[J" + render(collector.snapshot(), args.gateway), flush=True)
+                collector.stop_event.wait(1)
     except KeyboardInterrupt:
-        stop.set()
+        pass
+    finally:
+        collector.stop()
+        collector.join(args.timeout + 2)
 
 
 if __name__ == "__main__":
