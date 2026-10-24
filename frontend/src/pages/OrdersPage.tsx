@@ -1,18 +1,21 @@
 // Orders list. A customer sees their own orders; an admin receives the orders of every
-// customer from order-service, and the page says so.
+// customer from order-service, and the page says so. For an admin, the names of the
+// customers of the page come from user-service in one grouped request; if it fails,
+// each row shows "Cliente #ID" and the orders are still shown.
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listOrders } from '../api/orders';
 import type { NumberedPage, OrderOut } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { readCatalogParams } from '../catalog/params';
-import { ErrorAlert } from '../components/Alert';
+import { Alert, ErrorAlert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { OrderStatusBadge } from '../components/OrderParts';
 import { Pagination } from '../components/Pagination';
 import { Spinner } from '../components/Spinner';
 import { shortId } from '../orders/orderStatus';
+import { buyerName, useBuyers } from '../orders/useBuyers';
 import { formatDateTime, formatMoney } from '../utils/format';
 
 export const ORDERS_PAGE_SIZE = 10;
@@ -39,6 +42,10 @@ export function OrdersPage() {
       });
     return () => controller.abort();
   }, [page, attempt, user?.id]);
+
+  // Customers of this page other than the admin: one request for the whole page
+  const otherIds = result.status === 'ready' ? result.page.items.map((o) => o.user_id).filter((id) => id !== user?.id) : [];
+  const buyers = useBuyers(otherIds, isAdmin);
 
   return (
     <section className="orders">
@@ -87,10 +94,16 @@ export function OrdersPage() {
       )}
       {result.status === 'ready' && result.page.items.length > 0 && (
         <>
+          {buyers.status === 'error' && (
+            <Alert tone="info">
+              <p>No pudimos obtener los nombres de los clientes; se muestra su número.</p>
+            </Alert>
+          )}
           <ul className="order-list" aria-label="Pedidos">
             {result.page.items.map((order) => {
               const units = order.items.reduce((sum, item) => sum + item.quantity, 0);
               const own = order.user_id === user?.id;
+              const buyer = buyers.byId.get(order.user_id);
               return (
                 <li key={order.id} className="order-row">
                   <div className="order-row__main">
@@ -99,8 +112,13 @@ export function OrdersPage() {
                     </Link>
                     <span className="order-row__meta">
                       {formatDateTime(order.created_at)} · {units} {units === 1 ? 'unidad' : 'unidades'}
-                      {isAdmin && <> · {own ? 'Tuyo' : `Cliente #${order.user_id}`}</>}
                     </span>
+                    {isAdmin && (
+                      <span className="order-row__buyer">
+                        {own ? 'Tuyo' : buyerName(order.user_id, buyers)}
+                        {!own && buyer && <span className="order-row__email"> · {buyer.email}</span>}
+                      </span>
+                    )}
                   </div>
                   <OrderStatusBadge order={order} />
                   <span className="price">{formatMoney(order.total, order.currency)}</span>

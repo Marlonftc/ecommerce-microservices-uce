@@ -3,47 +3,68 @@ import { AuthProvider } from './auth/AuthContext';
 import { GuestOnly, RequireAuth, RequireRole } from './auth/guards';
 import { CartProvider } from './cart/CartContext';
 import { Layout } from './components/Layout';
+import { NotificationsProvider } from './notifications/NotificationsContext';
 import { AccountPage } from './pages/AccountPage';
 import { AdminHomePage } from './pages/AdminHomePage';
+import { AdminProductEditPage } from './pages/admin/AdminProductEditPage';
+import { AdminProductNewPage } from './pages/admin/AdminProductNewPage';
+import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage';
+import { AdminOperationsPage } from './pages/admin/AdminOperationsPage';
+import { AdminProductsPage } from './pages/admin/AdminProductsPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { CartPage } from './pages/CartPage';
 import { CatalogPage } from './pages/CatalogPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { OrderDetailPage } from './pages/OrderDetailPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { RegisterPage } from './pages/RegisterPage';
 
-/** Route table, shared by the app and the tests. CartProvider needs AuthProvider above it. */
+/** Route table, shared by the app and the tests. CartProvider and NotificationsProvider need
+ * AuthProvider above them (and NotificationsProvider a router, for the current page). */
 export function AppRoutes() {
   return (
     <CartProvider>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="productos" element={<CatalogPage />} />
-          <Route path="productos/:productId" element={<ProductDetailPage />} />
-          <Route element={<GuestOnly />}>
-            <Route path="login" element={<LoginPage />} />
-          </Route>
-          <Route element={<GuestOnly fallback="/cuenta" />}>
-            <Route path="registro" element={<RegisterPage />} />
-          </Route>
-          <Route element={<RequireAuth />}>
-            <Route path="cuenta" element={<AccountPage />} />
-            <Route path="carrito" element={<CartPage />} />
-            <Route path="checkout" element={<CheckoutPage />} />
-            <Route path="pedidos" element={<OrdersPage />} />
-            <Route path="pedidos/:orderId" element={<OrderDetailPage />} />
-            <Route element={<RequireRole role="admin" />}>
-              <Route path="admin" element={<AdminHomePage />} />
+      <NotificationsProvider>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route path="productos" element={<CatalogPage />} />
+            <Route path="productos/:productId" element={<ProductDetailPage />} />
+            <Route element={<GuestOnly />}>
+              <Route path="login" element={<LoginPage />} />
             </Route>
+            <Route element={<GuestOnly fallback="/cuenta" />}>
+              <Route path="registro" element={<RegisterPage />} />
+            </Route>
+            <Route element={<RequireAuth />}>
+              <Route path="cuenta" element={<AccountPage />} />
+              <Route path="carrito" element={<CartPage />} />
+              <Route path="checkout" element={<CheckoutPage />} />
+              <Route path="pedidos" element={<OrdersPage />} />
+              <Route path="pedidos/:orderId" element={<OrderDetailPage />} />
+              {/* Customers only: an admin would receive every customer's notifications */}
+              <Route element={<RequireRole role="customer" />}>
+                <Route path="notificaciones" element={<NotificationsPage />} />
+              </Route>
+              <Route element={<RequireRole role="admin" />}>
+                <Route path="admin" element={<AdminHomePage />} />
+                <Route path="admin/productos" element={<AdminProductsPage />} />
+                <Route path="admin/productos/nuevo" element={<AdminProductNewPage />} />
+                <Route path="admin/productos/:productId" element={<AdminProductEditPage />} />
+                <Route path="admin/usuarios" element={<AdminUsersPage />} />
+                <Route path="admin/operaciones" element={<AdminOperationsPage />} />
+                <Route path="admin/notificaciones" element={<AdminNotificationsPage />} />
+              </Route>
+            </Route>
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
+        </Routes>
+      </NotificationsProvider>
     </CartProvider>
   );
 }

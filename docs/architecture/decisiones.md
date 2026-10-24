@@ -1,6 +1,6 @@
 # Registro de decisiones de arquitectura
 
-Decisiones aprobadas antes de iniciar la implementación (Fase 4). D19 se añadió durante el desarrollo.
+Decisiones aprobadas antes de iniciar la implementación (Fase 4). D19 a D21 se añadieron durante el desarrollo.
 
 | # | Decisión | Justificación breve |
 |---|---|---|
@@ -23,6 +23,8 @@ Decisiones aprobadas antes de iniciar la implementación (Fase 4). D19 se añadi
 | D17 | `/internal` se protege en el gateway y también en cada microservicio (defensa en profundidad) | El gateway publica solo una lista de rutas y responde 404 a todo lo demás, incluidas variantes codificadas o con `..`, y elimina `X-Internal-Key` recibida del exterior. Cada servicio sigue exigiendo la clave interna: si el gateway fallara o alguien llegara a la red interna, la segunda barrera sigue activa |
 | D18 | Upstreams de Nginx con `zone` y `resolve`, resolver de Docker `127.0.0.11` con `valid=10s` y `resolver_timeout 5s` | Las réplicas nuevas de product-service se usan y las eliminadas se descartan sin reiniciar Nginx. Con un servicio sin contenedores, el DNS de Docker tarda unos segundos en responder `NXDOMAIN`; con 2 s Nginx abandonaba la consulta y conservaba la IP anterior, con 5 s recibe la respuesta y la descarta (ver `docs/testing/08-gateway.md`, H-02) |
 | D19 | Administración de cuentas con `PATCH /users/{id}` (solo `role` e `is_active`), sin borrado físico; cambios serializados con `pg_advisory_xact_lock` | Desactivar es reversible y conserva la relación con los pedidos. El bloqueo asesor, la relectura del administrador desde PostgreSQL y el bloqueo `FOR UPDATE` de la cuenta destino garantizan que siempre quede al menos un administrador activo, incluso con cambios simultáneos. Un administrador no puede modificar su propia cuenta |
+| D20 | El frontend es un contenedor propio (Nginx sin privilegios) detrás del gateway; el gateway sirve React en `/` y la API en `/api` | Un solo origen y un solo puerto publicado: sin CORS y sin exponer otro puerto. El frontend solo está en `ecommerce-net`, con sistema de archivos de solo lectura y sin credenciales. Cualquier ruta fuera de `/api` devuelve `index.html` (navegación SPA); una ruta `/api` desconocida sigue en 404 JSON sin reenviarse, y las barreras de `/internal` se evalúan antes. El gateway no depende del frontend: si se detiene, la API sigue funcionando |
+| D21 | Cabeceras de seguridad y CSP estricta (`'self'`, sin `unsafe-inline` ni `unsafe-eval`) declaradas una sola vez en el gateway | El build de Vite no tiene código en línea. En Nginx una `location` con `add_header` propio deja de heredar las del servidor, por eso las cabeceras están en un archivo incluido en el servidor y en `@rate_limited`. Sin HSTS ni `upgrade-insecure-requests`, porque el sistema se sirve por HTTP en 127.0.0.1. `VITE_PAYMENT_DEMO` es un valor de compilación: el build normal usa `false` y el de pruebas E2E usa `true` con otra etiqueta de imagen |
 
 ## D11: efecto de desactivar o cambiar el rol de un usuario
 

@@ -25,5 +25,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
+    // Longer limit for waitFor/findBy under load (see the file)
+    setupFiles: ['src/test/setup.ts'],
   },
 });

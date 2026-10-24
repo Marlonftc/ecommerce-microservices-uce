@@ -22,6 +22,7 @@ const STATUS_TONES: Record<OrderStatus, BadgeTone> = {
   CANCELLED: 'neutral',
 };
 
+/** Reasons as the owner of the order reads them; see cancelReasonText for other viewers */
 export const CANCEL_REASONS: Record<CancelReason, string> = {
   USER: 'Lo cancelaste tú.',
   EXPIRED: 'Venció el tiempo para pagar.',
@@ -50,33 +51,59 @@ export function releaseText(order: OrderOut): string {
   return 'La liberación de las unidades reservadas está pendiente; el sistema la completará automáticamente.';
 }
 
+/** Label and colour of the state: the same for every viewer */
+export function statusBadge(order: Pick<OrderOut, 'status'>): { label: string; tone: BadgeTone } {
+  return { label: STATUS_LABELS[order.status], tone: STATUS_TONES[order.status] };
+}
+
+/**
+ * Cancellation reason. ownView must come from comparing order.user_id with the viewer
+ * (isOwner), never from the role: an admin can also buy and cancel their own orders.
+ */
+export function cancelReasonText(reason: CancelReason | null, ownView: boolean): string {
+  if (!reason) return 'Pedido cancelado.';
+  if (reason === 'USER' && !ownView) return 'Lo canceló el cliente.';
+  return CANCEL_REASONS[reason];
+}
+
 export interface OrderView {
   label: string;
   tone: BadgeTone;
-  /** One sentence with what the state means for the customer */
+  /** One sentence with what the state means, written for the person looking at it */
   detail: string;
 }
 
-export function describeOrder(order: OrderOut): OrderView {
-  const label = STATUS_LABELS[order.status];
-  const tone = STATUS_TONES[order.status];
+/** ownView: the viewer is the owner of the order (see isOwner) */
+export function describeOrder(order: OrderOut, ownView: boolean): OrderView {
+  const { label, tone } = statusBadge(order);
   switch (order.status) {
     case 'RESERVING':
-      return { label, tone, detail: 'Estamos reservando tus productos en el inventario.' };
+      return {
+        label, tone,
+        detail: ownView ? 'Estamos reservando tus productos en el inventario.' : 'Se están reservando los productos en el inventario.',
+      };
     case 'PENDING_PAYMENT':
-      return { label, tone, detail: 'Las unidades están reservadas. Paga antes de que venza el plazo.' };
+      return {
+        label, tone,
+        detail: ownView
+          ? 'Las unidades están reservadas. Paga antes de que venza el plazo.'
+          : 'Las unidades están reservadas a la espera del pago del cliente.',
+      };
     case 'PAYMENT_PENDING':
-      return { label, tone, detail: 'El resultado del pago aún no se conoce. No vuelvas a pagar: se confirmará solo.' };
+      return {
+        label, tone,
+        detail: ownView
+          ? 'El resultado del pago aún no se conoce. No vuelvas a pagar: se confirmará solo.'
+          : 'El resultado del pago aún no se conoce; se confirmará automáticamente.',
+      };
     case 'PAID':
       return order.inventory_status === 'CONFIRMED'
         ? { label, tone, detail: 'Compra completada.' }
         : { label, tone, detail: 'Pago aprobado. Falta confirmar las unidades en el inventario; se hará automáticamente.' };
     case 'PAYMENT_REJECTED':
       return { label, tone, detail: `El pago fue rechazado. ${releaseText(order)}` };
-    case 'CANCELLED': {
-      const reason = order.cancel_reason ? CANCEL_REASONS[order.cancel_reason] : 'Pedido cancelado.';
-      return { label, tone, detail: `${reason} ${releaseText(order)}` };
-    }
+    case 'CANCELLED':
+      return { label, tone, detail: `${cancelReasonText(order.cancel_reason, ownView)} ${releaseText(order)}` };
   }
 }
 

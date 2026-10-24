@@ -1,0 +1,15 @@
+# Only what the build needs is sent to Docker
+node_modules
+dist
+coverage
+.env
+.env.*
+*.log
+*.tmp
+# Tests are not part of the image (typecheck still sees the sources it needs)
+src/**/*.test.ts
+src/**/*.test.tsx
+src/test
+README.md
+Dockerfile
+.dockerignore

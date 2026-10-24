@@ -4,7 +4,7 @@ import { ApiError } from '../api/errors';
 import { order, OTHER_ORDER_ID } from '../test/orders';
 import { classifyCheckoutError, classifyPaymentError, extraNumbers, extraString } from './orderErrors';
 import {
-  STATUS_LABELS, canCancel, canPay, describeOrder, isActive, isSettling, shortId,
+  STATUS_LABELS, canCancel, canPay, cancelReasonText, describeOrder, isActive, isSettling, shortId,
 } from './orderStatus';
 import {
   PENDING_KEY, clearCheckout, clearPayment, getCheckout, getPayment, newKey, saveCheckout, savePayment,
@@ -18,27 +18,47 @@ describe('order states', () => {
     expect(Object.keys(STATUS_LABELS).sort()).toEqual(
       ['CANCELLED', 'PAID', 'PAYMENT_PENDING', 'PAYMENT_REJECTED', 'PENDING_PAYMENT', 'RESERVING'],
     );
-    const expired = describeOrder(order({ status: 'CANCELLED', cancel_reason: 'EXPIRED', inventory_status: 'RELEASED' }));
+    const expired = describeOrder(order({ status: 'CANCELLED', cancel_reason: 'EXPIRED', inventory_status: 'RELEASED' }), true);
     expect(expired.label).toBe('Cancelado');
     expect(expired.detail).toBe('Venció el tiempo para pagar. Las unidades reservadas se liberaron.');
   });
 
   it('PAID with inventory RESERVED is not a completed purchase yet', () => {
-    expect(describeOrder(order({ status: 'PAID', inventory_status: 'RESERVED' })).detail).toMatch(/Falta confirmar las unidades/);
-    expect(describeOrder(order({ status: 'PAID', inventory_status: 'CONFIRMED' })).detail).toBe('Compra completada.');
+    expect(describeOrder(order({ status: 'PAID', inventory_status: 'RESERVED' }), true).detail).toMatch(/Falta confirmar las unidades/);
+    expect(describeOrder(order({ status: 'PAID', inventory_status: 'CONFIRMED' }), true).detail).toBe('Compra completada.');
   });
 
   it('never claims a release that is still pending', () => {
-    const pending = describeOrder(order({ status: 'CANCELLED', cancel_reason: 'USER', inventory_status: 'RESERVED' }));
+    const pending = describeOrder(order({ status: 'CANCELLED', cancel_reason: 'USER', inventory_status: 'RESERVED' }), true);
     expect(pending.detail).toContain('está pendiente');
     expect(pending.detail).not.toContain('se liberaron');
-    expect(describeOrder(order({ status: 'PAYMENT_REJECTED', inventory_status: 'RESERVED' })).detail).toContain('está pendiente');
-    expect(describeOrder(order({ status: 'CANCELLED', cancel_reason: 'INSUFFICIENT_STOCK', inventory_status: 'NOT_RESERVED' })).detail)
+    expect(describeOrder(order({ status: 'PAYMENT_REJECTED', inventory_status: 'RESERVED' }), true).detail).toContain('está pendiente');
+    expect(describeOrder(order({ status: 'CANCELLED', cancel_reason: 'INSUFFICIENT_STOCK', inventory_status: 'NOT_RESERVED' }), true).detail)
       .toContain('No llegaron a reservarse');
   });
 
   it('PAYMENT_PENDING says the result is unknown and not to pay again', () => {
-    expect(describeOrder(order({ status: 'PAYMENT_PENDING' })).detail).toMatch(/aún no se conoce. No vuelvas a pagar/);
+    expect(describeOrder(order({ status: 'PAYMENT_PENDING' }), true).detail).toMatch(/aún no se conoce. No vuelvas a pagar/);
+  });
+
+  it('cancelled by the user: "Lo cancelaste tú" for the owner, "Lo canceló el cliente" for anyone else', () => {
+    const cancelled = order({ status: 'CANCELLED', cancel_reason: 'USER', inventory_status: 'RELEASED' });
+    expect(describeOrder(cancelled, true).detail).toBe('Lo cancelaste tú. Las unidades reservadas se liberaron.');
+    expect(describeOrder(cancelled, false).detail).toBe('Lo canceló el cliente. Las unidades reservadas se liberaron.');
+    // The release text stays honest for both viewers
+    const pending = order({ status: 'CANCELLED', cancel_reason: 'USER', inventory_status: 'RESERVED' });
+    expect(describeOrder(pending, false).detail).toMatch(/^Lo canceló el cliente\. La liberación .* está pendiente/);
+    // Reasons that do not depend on who cancelled read the same
+    expect(cancelReasonText('EXPIRED', false)).toBe(cancelReasonText('EXPIRED', true));
+    expect(cancelReasonText(null, false)).toBe('Pedido cancelado.');
+  });
+
+  it('texts for someone else\'s order never address the viewer as the buyer', () => {
+    for (const status of ['RESERVING', 'PENDING_PAYMENT', 'PAYMENT_PENDING'] as const) {
+      const detail = describeOrder(order({ status }), false).detail;
+      expect(detail).not.toMatch(/\btus\b|\bPaga\b|No vuelvas/);
+    }
+    expect(describeOrder(order({ status: 'PENDING_PAYMENT' }), false).detail).toBe('Las unidades están reservadas a la espera del pago del cliente.');
   });
 
   it('knows when the order still changes by itself', () => {

@@ -1,7 +1,8 @@
-// product-service through the gateway: /api/products (public catalogue).
-// The catalogue never asks for inactive products (include_inactive is admin only).
+// product-service through the gateway: /api/products. The public catalogue never asks
+// for inactive products; include_inactive and the writing calls are admin only (and
+// product-service checks the role again).
 import { http } from './http';
-import type { OffsetPage, ProductOut } from './types';
+import type { OffsetPage, ProductIn, ProductOut, ProductUpdate } from './types';
 
 /** Largest page product-service accepts (limit <= 100) */
 export const MAX_PAGE_SIZE = 100;
@@ -11,14 +12,33 @@ export const CATEGORY_SCAN_MAX_REQUESTS = 5;
 export interface ProductQuery {
   q?: string;
   category?: string;
+  /** Admin only: also inactive products */
+  includeInactive?: boolean;
   limit: number;
   offset: number;
 }
 
-/** GET /api/products: active products, ordered by id */
+/** GET /api/products: active products (and inactive ones for an admin), ordered by id */
 export async function listProducts(query: ProductQuery, signal?: AbortSignal): Promise<OffsetPage<ProductOut>> {
-  const { q, category, limit, offset } = query;
-  return (await http.get<OffsetPage<ProductOut>>('/products', { query: { q, category, limit, offset }, signal })).data;
+  const { q, category, includeInactive, limit, offset } = query;
+  const include_inactive = includeInactive ? true : undefined;
+  return (await http.get<OffsetPage<ProductOut>>('/products', { query: { q, category, include_inactive, limit, offset }, signal })).data;
+}
+
+/** POST /api/products (admin): 201 created, 409 SKU already exists, 422 invalid data.
+ *  There is no Idempotency-Key: an unknown outcome is checked, never repeated blindly. */
+export async function createProduct(data: ProductIn, signal?: AbortSignal): Promise<ProductOut> {
+  return (await http.post<ProductOut>('/products', data, { signal })).data;
+}
+
+/** PUT /api/products/{id} (admin): full replacement, is_active included; repeating it is harmless */
+export async function replaceProduct(id: number, data: ProductUpdate, signal?: AbortSignal): Promise<ProductOut> {
+  return (await http.put<ProductOut>(`/products/${id}`, data, { signal })).data;
+}
+
+/** DELETE /api/products/{id} (admin): 204, the product is only deactivated */
+export async function deactivateProduct(id: number, signal?: AbortSignal): Promise<void> {
+  await http.delete<void>(`/products/${id}`, { signal });
 }
 
 /** GET /api/products/{id}: 404 when it does not exist or is inactive (an admin also sees inactive ones) */

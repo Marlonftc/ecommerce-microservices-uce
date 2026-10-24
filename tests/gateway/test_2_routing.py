@@ -126,14 +126,28 @@ def test_1_every_public_route_reaches_its_service(t, adm, customer):
 
 
 def test_1_unknown_routes_answer_404_without_forwarding(t):
-    for path in ["/api/productsXYZ", "/api/products-old", "/api/PRODUCTS", "/API/products", "/api", "/api/",
-                 "/", "/api/auth", "/api/admin", "/api/admin/users", "/api/health/ready", "/docs",
-                 "/health/ready", "/api/cartx", "/api/ordersXYZ/1"]:
+    # Any /api path that is not a public route: JSON 404 from nginx, nothing forwarded
+    for path in ["/api/productsXYZ", "/api/products-old", "/api/PRODUCTS", "/api", "/api/",
+                 "/api/auth", "/api/admin", "/api/admin/users", "/api/health/ready",
+                 "/api/cartx", "/api/ordersXYZ/1", "/api/docs"]:
         r = t.call(None, "GET", path)
         assert (r.status_code, r.json()) == (404, NOT_FOUND), path
         assert "x-instance" not in r.headers
-    assert t.verify_log() == 15
+    assert t.verify_log() == 12
 
+
+def test_1_other_paths_are_served_by_the_frontend_only(t):
+    # Since stage 6 every path outside /api belongs to the React application: the
+    # frontend answers index.html and React Router shows the page or its own
+    # "not found" page. These paths never reach a microservice (/docs of FastAPI,
+    # /health/ready of a service...): the log shows a frontend container as upstream.
+    for path in ["/", "/docs", "/health/ready", "/API/products", "/login", "/admin/usuarios"]:
+        r = t.call("frontend", "GET", path)
+        assert r.status_code == 200, path
+        assert r.headers["content-type"].startswith("text/html"), path
+        assert '<div id="root"></div>' in r.text, path
+        assert "x-instance" not in r.headers
+    assert t.verify_log() == 6
 
 def test_1_service_redirect_keeps_the_api_prefix(t, customer):
     r = t.call("order-service", "GET", "/api/orders/", headers=customer.headers, follow_redirects=False)

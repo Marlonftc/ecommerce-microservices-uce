@@ -2,12 +2,12 @@
 import { useEffect, useRef } from 'react';
 import type { OrderOut } from '../api/types';
 import { useCountdown } from '../auth/useCountdown';
-import { describeOrder, expiresAtMs } from '../orders/orderStatus';
+import { expiresAtMs, statusBadge } from '../orders/orderStatus';
 import { formatMoney } from '../utils/format';
 import { StatusBadge } from './StatusBadge';
 
 export function OrderStatusBadge({ order }: { order: OrderOut }) {
-  const view = describeOrder(order);
+  const view = statusBadge(order);
   return <StatusBadge tone={view.tone} label={view.label} />;
 }
 

@@ -1,4 +1,4 @@
-# Short timings ONLY for the end-to-end tests (tests/e2e). Never for normal use.
+# Short timings ONLY for the end-to-end tests (tests/e2e and tests/ui). Never for normal use.
 # Loaded together with the other two files:
 #   docker compose -f compose.yaml -f compose.override.example.yaml -f compose.e2e.yaml up -d
 services:
@@ -18,3 +18,14 @@ services:
   payment-service:
     environment:
       PAYMENT_SIMULATION_ENABLED: "true"
+
+  # Frontend with the simulated payment options (needed by tests/ui), under its own
+  # tag so the normal image (ecommerce-uce/frontend, VITE_PAYMENT_DEMO=false) is not
+  # overwritten. After the tests the normal one is restored with:
+  #   docker compose -f compose.yaml -f compose.override.example.yaml up -d
+  # and checked by its label and by the bundle the gateway serves (see README).
+  frontend:
+    build:
+      args:
+        VITE_PAYMENT_DEMO: "true"
+    image: ecommerce-uce/frontend:e2e
