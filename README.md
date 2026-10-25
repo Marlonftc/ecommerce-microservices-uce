@@ -79,8 +79,8 @@ principales:
 | `POSTGRES_PASSWORD`, `*_DB_PASSWORD` | Superusuario (solo para crear las bases) y un usuario por servicio |
 | `INTERNAL_API_KEY` | Clave de las llamadas entre servicios (`/internal`) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Administrador inicial, creado por `user-migrate` |
-| `PAYMENT_SIMULATION_ENABLED` | `true` permite los modos simulados de pago (rechazo y aprobación lenta) |
-| `VITE_PAYMENT_DEMO` | `true` muestra esos modos en la interfaz; se aplica al **construir** la imagen del frontend |
+| `PAYMENT_SIMULATION_ENABLED` | `true` habilita los tres modos de pago simulado: `APPROVE`, `REJECT` y `SLOW_APPROVE` |
+| `VITE_PAYMENT_DEMO` | `true` muestra las opciones de rechazo y respuesta HTTP tardía; se aplica al **construir** la imagen del frontend |
 
 El archivo `.env` y la carpeta `secrets/` están en `.gitignore`: nunca se suben al repositorio.
 
@@ -114,7 +114,9 @@ Ante un problema: `docker compose logs <servicio>`.
 
 ### 4. Modo demostración de pagos
 
-Por defecto la interfaz no muestra los modos simulados. Para una demostración:
+Por defecto la interfaz ofrece `Pagar` (`APPROVE`) y oculta las opciones de rechazo y respuesta HTTP
+tardía. Ese pago también es simulado y requiere `PAYMENT_SIMULATION_ENABLED=true`. Para mostrar
+las opciones de demostración:
 
 ```powershell
 # En .env: VITE_PAYMENT_DEMO=true y PAYMENT_SIMULATION_ENABLED=true
@@ -187,7 +189,7 @@ docker compose down       # elimina contenedores y redes; los datos de PostgreSQ
 
 - Mientras un pedido está en proceso de compra, el carrito no se puede modificar. Si el pago se aprueba, el carrito se vacía; si se rechaza o se cancela el pedido, se conserva.
 - Se usa una sola instancia de PostgreSQL con una base de datos y un usuario por servicio, por lo que el aislamiento es lógico y no físico.
-- Los pagos y las notificaciones son simulados.
+- Los pagos y las notificaciones son simulados. No se procesan tarjetas, dinero real ni webhooks financieros. Se conserva el simulador para la entrega académica y Stripe Checkout Sandbox queda como posible trabajo futuro: [decisión D22, escenarios y coordinación de la Saga](docs/architecture/decisiones.md#d22-pagos-simulados-y-alcance-de-la-entrega-académica).
 - Los tokens de acceso duran 30 minutos. Desactivar un usuario o cambiar su rol no invalida los tokens que ya tenía: los servicios que solo verifican la firma seguirán aceptándolos hasta que expiren.
 - El sistema se sirve por HTTP en `127.0.0.1`. Un despliegue real necesitaría TLS (y entonces HSTS).
 
