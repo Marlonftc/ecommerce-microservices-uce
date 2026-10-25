@@ -4,6 +4,7 @@
 // order-service has the last word: it only reactivates an operation that is still FAILED and
 // that no runner holds (409 OPERATION_NOT_RETRYABLE otherwise). An unknown outcome is never
 // repeated: the operations of that order are read again and their real state is shown.
+// Every manual attempt also reloads the filtered page and its total with GET only.
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listOperations, retryOperation, type OperationFilters } from '../../api/adminOperations';
@@ -72,6 +73,21 @@ function toSearch(values: { estado: string; tipo: string; error: string; pedido:
   return search;
 }
 
+function readDraft(search: URLSearchParams) {
+  const { filters, invalidOrder } = readFilters(search);
+  return {
+    estado: filters.status ?? '', tipo: filters.kind ?? '', error: filters.errorKind ?? '',
+    pedido: invalidOrder ?? filters.orderId ?? '',
+  };
+}
+
+function withPage(search: URLSearchParams, page: number): URLSearchParams {
+  const next = new URLSearchParams(search);
+  if (page > 1) next.set('pagina', String(page));
+  else next.delete('pagina');
+  return next;
+}
+
 const isLocked = (op: OperationOut, now: number) => op.locked_until !== null && Date.parse(op.locked_until) > now;
 
 type Result = { status: 'loading' } | { status: 'ready'; page: NumberedPage<OperationOut> } | { status: 'error'; error: unknown };
@@ -85,10 +101,11 @@ interface Notice {
 export function AdminOperationsPage() {
   const onForbidden = useForbiddenCheck();
   const [search, setSearch] = useSearchParams();
+  const searchKey = search.toString();
   const { page } = readCatalogParams(search);
   const { filters, invalidOrder } = readFilters(search);
   const filterKey = JSON.stringify(filters);
-  const [draft, setDraft] = useState({ estado: search.get('estado') ?? '', tipo: search.get('tipo') ?? '', error: search.get('error') ?? '', pedido: search.get('pedido') ?? '' });
+  const [draft, setDraft] = useState(() => readDraft(search));
   const [draftError, setDraftError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<Result>({ status: 'loading' });
@@ -97,6 +114,18 @@ export function AdminOperationsPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const busyRef = useRef(false);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  useEffect(() => {
+    setDraft(readDraft(new URLSearchParams(searchKey)));
+    setDraftError(null);
+    setConfirmId(null);
+  }, [searchKey]);
 
   useEffect(() => {
     if (invalidOrder) return undefined;
@@ -105,6 +134,12 @@ export function AdminOperationsPage() {
     listOperations(JSON.parse(filterKey) as OperationFilters, page, OPERATIONS_PAGE_SIZE, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return;
+        const lastPage = Math.max(1, Math.ceil(data.total / OPERATIONS_PAGE_SIZE));
+        if (page > lastPage) {
+          // Replace the invalid history entry; retain every active filter.
+          setSearch(withPage(new URLSearchParams(searchKey), lastPage), { replace: true });
+          return;
+        }
         setNow(Date.now());
         setResult({ status: 'ready', page: data });
       })
@@ -113,7 +148,7 @@ export function AdminOperationsPage() {
         if (!onForbidden(error)) setResult({ status: 'error', error });
       });
     return () => controller.abort();
-  }, [filterKey, invalidOrder, page, attempt, onForbidden]);
+  }, [filterKey, invalidOrder, page, attempt, onForbidden, searchKey, setSearch]);
 
   // When the nearest lock expires, render again so that the retry becomes available
   const items = result.status === 'ready' ? result.page.items : [];
@@ -124,11 +159,6 @@ export function AdminOperationsPage() {
     return () => clearTimeout(timer);
   }, [nextUnlock]);
 
-  const replaceRow = (updated: OperationOut) =>
-    setResult((r) =>
-      r.status === 'ready' ? { ...r, page: { ...r.page, items: r.page.items.map((op) => (op.id === updated.id ? updated : op)) } } : r,
-    );
-
   function applyFilters(event: FormEvent) {
     event.preventDefault();
     if (draft.pedido.trim() && !isOrderId(draft.pedido.trim())) {
@@ -137,15 +167,15 @@ export function AdminOperationsPage() {
     }
     setDraftError(null);
     setNotice(null);
-    setSearch(toSearch(draft));
+    const next = toSearch(draft);
+    if (next.toString() === searchKey) setAttempt((n) => n + 1);
+    else setSearch(next);
   }
 
   /** Reads the operations of the order again after an unknown outcome; never POSTs again */
   async function readBack(op: OperationOut): Promise<OperationOut | null> {
     const page = await listOperations({ orderId: op.order_id }, 1, 100);
-    const current = page.items.find((item) => item.id === op.id) ?? null;
-    if (current) replaceRow(current);
-    return current;
+    return page.items.find((item) => item.id === op.id) ?? null;
   }
 
   async function retry(op: OperationOut) {
@@ -154,13 +184,17 @@ export function AdminOperationsPage() {
     setBusyId(op.id);
     setConfirmId(null);
     setNotice(null);
+    let refreshList = true;
     try {
-      const { outcome, operation } = await retryOperation(op.id);
-      replaceRow(operation);
-      setNow(Date.now());
+      const { outcome } = await retryOperation(op.id);
+      if (!mounted.current) return;
       setNotice({ opId: op.id, tone: outcome === 'DONE' ? 'success' : outcome === 'RETRY' || outcome === 'SKIPPED' ? 'info' : 'warning', text: OUTCOME_TEXT[outcome] });
     } catch (error) {
-      if (onForbidden(error)) return;
+      if (!mounted.current) return;
+      if (onForbidden(error)) {
+        refreshList = false;
+        return;
+      }
       if (error instanceof ApiError && error.status === 409 && error.code === 'OPERATION_NOT_RETRYABLE') {
         const status = typeof error.extra.status === 'string' ? error.extra.status : '';
         const claimed = error.extra.claimed === true;
@@ -170,14 +204,12 @@ export function AdminOperationsPage() {
           tone: 'info',
           text: `order-service no la reintentó: ${claimed ? 'otro proceso la está ejecutando ahora' : `ya no está fallida (estado: ${label})`}. La lista se actualizó.`,
         });
-        setAttempt((n) => n + 1);
       } else if (error instanceof ApiError && error.status === 404) {
         setNotice({ opId: op.id, tone: 'error', text: 'La operación ya no existe. La lista se actualizó.' });
-        setAttempt((n) => n + 1);
       } else if (isUncertain(error)) {
         try {
           const current = await readBack(op);
-          setNow(Date.now());
+          if (!mounted.current) return;
           setNotice({
             opId: op.id,
             tone: 'warning',
@@ -185,7 +217,12 @@ export function AdminOperationsPage() {
               ? `No recibimos la respuesta del reintento; pudo ejecutarse. Estado actual: ${STATUS_VIEW[current.status].label.toLowerCase()}, ${current.attempts} ${current.attempts === 1 ? 'intento' : 'intentos'}. No se volvió a enviar.`
               : 'No recibimos la respuesta del reintento y no encontramos la operación al consultar de nuevo.',
           });
-        } catch {
+        } catch (readError) {
+          if (!mounted.current) return;
+          if (onForbidden(readError)) {
+            refreshList = false;
+            return;
+          }
           setNotice({ opId: op.id, tone: 'warning', text: 'No recibimos la respuesta del reintento y no pudimos consultar su estado. Actualiza la lista más tarde; no se volverá a enviar solo.' });
         }
       } else {
@@ -193,7 +230,11 @@ export function AdminOperationsPage() {
       }
     } finally {
       busyRef.current = false;
-      setBusyId(null);
+      if (mounted.current) {
+        setBusyId(null);
+        // Refresh the current URL, even if navigation changed during the POST.
+        if (refreshList) setAttempt((n) => n + 1);
+      }
     }
   }
 
@@ -250,6 +291,12 @@ export function AdminOperationsPage() {
         </div>
       </form>
 
+      {notice && (
+        <Alert tone={notice.tone} title={`Operación #${notice.opId}`}>
+          <p>{notice.text}</p>
+        </Alert>
+      )}
+
       {invalidOrder && (
         <Alert tone="error">
           <p>El id de pedido de la dirección no es válido; no se hizo la consulta.</p>
@@ -269,6 +316,11 @@ export function AdminOperationsPage() {
         </div>
       )}
       {!invalidOrder && result.status === 'ready' && result.page.total === 0 && <EmptyState title="No hay operaciones con estos filtros" />}
+      {!invalidOrder && result.status === 'ready' && result.page.total > 0 && items.length === 0 && (
+        <EmptyState title="Esta página no tiene operaciones" action={
+          <Link to={`/admin/operaciones?${withPage(search, 1)}`} className="btn btn--secondary">Ir a la primera página</Link>
+        } />
+      )}
       {!invalidOrder && result.status === 'ready' && items.length > 0 && (
         <>
           <p className="catalog__summary">{result.page.total} operaciones</p>
@@ -277,7 +329,6 @@ export function AdminOperationsPage() {
               const locked = isLocked(op, now);
               const canRetry = op.status === 'FAILED' && !locked;
               const view = STATUS_VIEW[op.status];
-              const rowNotice = notice?.opId === op.id ? notice : null;
               return (
                 <li key={op.id} className="operation">
                   <div className="operation__head">
@@ -327,11 +378,6 @@ export function AdminOperationsPage() {
                       </div>
                     </div>
                   )}
-                  {rowNotice && (
-                    <Alert tone={rowNotice.tone}>
-                      <p>{rowNotice.text}</p>
-                    </Alert>
-                  )}
                 </li>
               );
             })}
@@ -340,7 +386,7 @@ export function AdminOperationsPage() {
             page={page}
             totalPages={Math.max(1, Math.ceil(result.page.total / OPERATIONS_PAGE_SIZE))}
             hrefFor={(target) => {
-              const query = toSearch({ estado: search.get('estado') ?? '', tipo: search.get('tipo') ?? '', error: search.get('error') ?? '', pedido: search.get('pedido') ?? '' }, target).toString();
+              const query = withPage(search, target).toString();
               return query ? `/admin/operaciones?${query}` : '/admin/operaciones';
             }}
           />

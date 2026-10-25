@@ -43,6 +43,24 @@ afterEach(() => {
 });
 
 describe('admin orders list: buyers', () => {
+  it.each([
+    { viewer: admin, title: 'No hay pedidos registrados', description: 'Los pedidos de los clientes aparecerán aquí para su consulta.', commercial: false },
+    { viewer: customer, title: 'Todavía no hay pedidos', description: 'Cuando confirmes una compra, aparecerá aquí.', commercial: true },
+  ])('empty orders use the presentation of $viewer.role without changing the query', async ({ viewer, title, description, commercial }) => {
+    signIn(api, viewer);
+    api.on('GET', '/api/orders', () => ordersPage([], 0));
+    renderAt('/pedidos');
+    expect(await screen.findByRole('heading', { name: title })).toBeTruthy();
+    expect(screen.getByText(description)).toBeTruthy();
+    const catalogue = screen.queryByRole('link', { name: 'Ver catálogo' });
+    if (commercial) expect(catalogue?.getAttribute('href')).toBe('/productos');
+    else expect(catalogue).toBeNull();
+    expect(api.callsTo('GET /api/orders')).toHaveLength(1);
+    expect(Object.fromEntries(api.callsTo('GET /api/orders')[0]!.url.searchParams)).toEqual({ page: '1', size: '10' });
+    expect(userCalls()).toHaveLength(0);
+    expect(api.calls.every((call) => call.key.startsWith('GET '))).toBe(true);
+  });
+
   it('one grouped request per page, unique ids without the admin, names and emails shown', async () => {
     signIn(api, admin);
     api.on('GET', '/api/orders', () =>
