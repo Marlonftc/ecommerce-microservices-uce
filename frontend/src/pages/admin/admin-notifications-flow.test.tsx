@@ -100,7 +100,7 @@ describe('customers\' notifications (admin, read-only)', () => {
   it('the personal bell is not shown to the admin', async () => {
     renderAt('/admin/notificaciones');
     await screen.findByText('Pedido cancelado');
-    expect(screen.queryByRole('link', { name: /^Notificaciones/ })).toBeNull();
+    expect(within(screen.getByRole('navigation', { name: 'Navegación principal' })).queryByRole('link', { name: /^Notificaciones/ })).toBeNull();
     expect(listCalls().every((c) => c.url.searchParams.get('size') === '20')).toBe(true);
   });
 });

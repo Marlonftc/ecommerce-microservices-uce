@@ -185,7 +185,7 @@ describe('login', () => {
     storeToken(makeToken({}));
     on('GET', '/api/users/me', () => json(200, customer));
     renderAt('/login', { from: '//evil.example/steal' });
-    expect(await screen.findByRole('heading', { name: /seis microservicios/ })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tecnología para lo que viene.' })).toBeTruthy();
   });
 });
 
@@ -195,7 +195,7 @@ describe('roles', () => {
     on('GET', '/api/users/me', () => json(200, customer));
     renderAt('/admin');
     expect(await screen.findByRole('heading', { name: 'No tienes permiso para ver esta página' })).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Administración' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Panel principal' })).toBeNull();
   });
 
   it('an admin sees the admin page and its link; no admin endpoint is called', async () => {
@@ -203,7 +203,7 @@ describe('roles', () => {
     on('GET', '/api/users/me', () => json(200, admin));
     renderAt('/admin');
     expect(await screen.findByRole('heading', { name: 'Administración' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Administración' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Panel principal' })).toBeTruthy();
     // Since stage 3 the cart of every signed-in user is read; no admin endpoint is called
     expect(calls.map((c) => c.key).sort()).toEqual(['GET /api/cart', 'GET /api/users/me']);
   });

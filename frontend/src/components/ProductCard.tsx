@@ -14,15 +14,20 @@ export function CategoryMark({ category, large = false }: { category: string; la
   );
 }
 
-export function ProductCard({ product, availability }: { product: ProductOut; availability: Availability }) {
+export function ProductCard({ product, availability, headingLevel = 'h2' }: {
+  product: ProductOut;
+  availability: Availability;
+  headingLevel?: 'h2' | 'h3';
+}) {
+  const Heading = headingLevel;
   return (
     <article className="product-card">
       <CategoryMark category={product.category} />
       <div className="product-card__body">
         <p className="product-card__category">{categoryLabel(product.category)}</p>
-        <h2 className="product-card__name">
+        <Heading className="product-card__name">
           <Link to={`/productos/${product.id}`}>{product.name}</Link>
-        </h2>
+        </Heading>
         <p className="product-card__sku">SKU {product.sku}</p>
       </div>
       <div className="product-card__footer">

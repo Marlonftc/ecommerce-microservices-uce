@@ -65,7 +65,7 @@ test('wrong password is rejected; a protected page leads to login and back', asy
 test('a customer cannot open administration pages or admin APIs', async ({ page, api }) => {
   const customer = await newCustomer(api, 'Cliente Permisos UI6');
   await signIn(page, customer.token);
-  await expect(page.getByRole('link', { name: 'Administración' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Panel principal' })).toHaveCount(0);
   for (const path of ['/admin', '/admin/productos', '/admin/usuarios', '/admin/operaciones', '/admin/notificaciones']) {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: 'No tienes permiso para ver esta página' }), path).toBeVisible();

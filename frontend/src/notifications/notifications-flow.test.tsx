@@ -2,7 +2,7 @@
 // Notifications of a customer: the bell counter (total of unread_only=true), its refresh
 // rules (pages, after a change, every 60 s while visible, on visibility, per session) and
 // the /notificaciones page.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../App';
@@ -104,7 +104,7 @@ describe('bell counter', () => {
     signIn(api, customer);
     renderAt('/');
     await waitFor(() => expect(bell().getAttribute('aria-label')).toBe('Notificaciones, 0 sin leer'));
-    expect(bell().textContent).toBe('');
+    expect(bell().querySelector('.site-nav__count')).toBeNull();
   });
 
   it('a failed read is never shown as 0', async () => {
@@ -112,15 +112,15 @@ describe('bell counter', () => {
     signIn(api, customer);
     renderAt('/');
     await waitFor(() => expect(bell().getAttribute('aria-label')).toMatch(/no se pudo consultar/));
-    expect(bell().textContent).toBe('?');
+    expect(bell().querySelector('.site-nav__count')?.textContent).toBe('?');
     expect(bell().getAttribute('aria-label')).not.toMatch(/0 sin leer/);
   });
 
   it('an admin has no bell and the app never asks for notifications', async () => {
     signIn(api, admin);
     renderAt('/');
-    await screen.findByRole('link', { name: 'Administración' });
-    expect(screen.queryByRole('link', { name: /^Notificaciones/ })).toBeNull();
+    await screen.findByRole('link', { name: 'Panel principal' });
+    expect(within(screen.getByRole('navigation', { name: 'Navegación principal' })).queryByRole('link', { name: /^Notificaciones/ })).toBeNull();
     await new Promise((r) => setTimeout(r, 20));
     expect(api.callsTo('GET /api/notifications')).toHaveLength(0);
   });
