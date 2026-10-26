@@ -79,7 +79,7 @@ test('user-service down: admin order list falls back to "Cliente #ID"', async ({
   await createOrder(api, customer.token, product.id);
   await signIn(page, await adminLogin(api));
   await withServiceStopped('user-service', async () => {
-    await page.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link', { name: 'Pedidos', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Navegación administrativa' }).getByRole('link', { name: 'Pedidos', exact: true }).click();
     await expect(page.getByText(/No pudimos obtener los nombres de los clientes/)).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText(`Cliente #${customer.id}`).first()).toBeVisible();
     expect(await page.locator('.order-row').count()).toBeGreaterThan(0);

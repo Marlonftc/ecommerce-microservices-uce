@@ -1,0 +1,1495 @@
+{
+  "id": null,
+  "uid": "uce-stage-a",
+  "title": "UCE · Estado de la plataforma",
+  "description": "Observabilidad local · Etapa A",
+  "tags": [
+    "UCE",
+    "observabilidad",
+    "etapa-a"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "timezone": "America/Guayaquil",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "options": {
+        "mode": "markdown",
+        "content": "## Plataforma de comercio electrónico · UCE\n**UP** disponible · **DEGRADED** proceso activo sin disponibilidad · **DOWN** sonda de proceso fallida · **UNKNOWN** sin información fiable. **Solo lectura.**\n\nSondas cada 10 s · datos válidos hasta 25 s · hora de Ecuador · historial desde el arranque de este panel, hasta 24 h. Los errores de consulta indican falta de información; no confirman una caída del servicio."
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "title": "Gateway · gateway",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Salud interna. Los microservicios requieren live y ready; Gateway y frontend usan sus healthchecks existentes.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state{component=\"gateway\"}",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Frontend · frontend",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 3,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Salud interna. Los microservicios requieren live y ready; Gateway y frontend usan sus healthchecks existentes.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state{component=\"frontend\"}",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Usuarios · user-service",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Salud interna. Los microservicios requieren live y ready; Gateway y frontend usan sus healthchecks existentes.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Catálogo · product-service",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 3,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Salud interna. Los microservicios requieren live y ready; Gateway y frontend usan sus healthchecks existentes.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state{component=\"product-service\"}",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Inventario · inventory-service",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Salud interna. Los microservicios requieren live y ready; Gateway y frontend usan sus healthchecks existentes.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state{component=\"inventory-service\"}",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Pedidos · order-service",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 7,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Salud interna. Los microservicios requieren live y ready; Gateway y frontend usan sus healthchecks existentes.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state{component=\"order-service\"}",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Pagos · payment-service",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Salud interna. Los microservicios requieren live y ready; Gateway y frontend usan sus healthchecks existentes.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state{component=\"payment-service\"}",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Notificaciones · notification-service",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 7,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Salud interna. Los microservicios requieren live y ready; Gateway y frontend usan sus healthchecks existentes.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state{component=\"notification-service\"}",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Historial · caídas, degradación y recuperación",
+      "type": "state-timeline",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Cada banda representa el estado observado, no el momento exacto del fallo. UNKNOWN conserva la falta de información.",
+      "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "alignValue": "center",
+        "rowHeight": 0.8,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "noValue": "Sin medición",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#748399"
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 85,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:component_state",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Tiempo de respuesta · readiness de los seis servicios",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 16,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Duración completa de la sonda (DNS, conexión y respuesta), en ms. No es tráfico de usuarios ni k6; los fallos completados pueden incluir el timeout.",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "decimals": 1,
+          "noValue": "Sin medición",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": false,
+            "showPoints": "auto",
+            "pointSize": 4
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "1000 * (probe_duration_seconds{job=\"blackbox\",probe=\"ready\"} and on(job,instance) uce:probe_success:fresh)",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Tiempo de respuesta · Gateway y frontend",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 16,
+        "y": 19,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "decimals": 1,
+          "noValue": "Sin medición",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": false,
+            "showPoints": "auto",
+            "pointSize": 4
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "1000 * (probe_duration_seconds{job=\"blackbox\",probe=~\"edge|route\"} and on(job,instance) uce:probe_success:fresh)",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{component}} / {{probe}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Entradas confirmadas en DOWN",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Transiciones entre observaciones conocidas durante el rango seleccionado. Los huecos UNKNOWN no se cuentan como caídas ni recuperaciones.",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Sin medición"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "sum(sum_over_time(uce:down_transition[$__range]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Recuperaciones confirmadas a UP",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 27,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Transiciones entre observaciones conocidas durante el rango seleccionado. Los huecos UNKNOWN no se cuentan como caídas ni recuperaciones.",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Sin medición"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "sum(sum_over_time(uce:recovery_transition[$__range]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Tienda a través del Gateway",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 27,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Comprueba HTTP 200, Content-Type HTML y doctype en /. Si Gateway falla, no se atribuye el problema al frontend: UNKNOWN.",
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 0
+                },
+                "1": {
+                  "text": "DOWN",
+                  "color": "#b83d49",
+                  "index": 1
+                },
+                "2": {
+                  "text": "DEGRADED",
+                  "color": "#bf870d",
+                  "index": 2
+                },
+                "3": {
+                  "text": "UP",
+                  "color": "#23866c",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "#748399",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#748399",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "uce:frontend_route_state",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Antigüedad máxima de sondas visibles",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 27,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "Tiempo desde las muestras aún visibles. Si desaparece una serie no representa todas las sondas: consulte UNKNOWN en las tarjetas.",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1,
+          "noValue": "Sin medición"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "max(time() - timestamp(probe_success{job=\"blackbox\"}))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Último código HTTP · solo mediciones vigentes",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 12,
+        "h": 11
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Componente",
+            "desc": false
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "Sin medición"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "probe_http_status_code{job=\"blackbox\"} and on(job,instance) uce:probe_success:fresh",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "module": true,
+              "__name__": true
+            },
+            "indexByName": {
+              "component": 0,
+              "probe": 1,
+              "instance": 2,
+              "Value": 3
+            },
+            "renameByName": {
+              "component": "Componente",
+              "probe": "Sonda",
+              "instance": "Ruta",
+              "Value": "HTTP"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Última medición · antigüedad por ruta",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 31,
+        "w": 12,
+        "h": 11
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Componente",
+            "desc": false
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1,
+          "noValue": "Sin medición"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uce-prometheus"
+          },
+          "expr": "time() - timestamp(probe_success{job=\"blackbox\"})",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "{{component}}",
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "module": true,
+              "__name__": true
+            },
+            "indexByName": {
+              "component": 0,
+              "probe": 1,
+              "instance": 2,
+              "Value": 3
+            },
+            "renameByName": {
+              "component": "Componente",
+              "probe": "Sonda",
+              "instance": "Ruta",
+              "Value": "Antigüedad"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Alcance de esta etapa",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 24,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uce-prometheus"
+      },
+      "description": "",
+      "options": {
+        "mode": "markdown",
+        "content": "**live** = proceso; **ready** = servicio y su propia base; **edge** = `/health` o `/healthz`; **route** = HTML de la tienda por Gateway. No se consultan PostgreSQL, credenciales ni la red de datos desde este stack.\n\nLas sondas usan nombres de servicio: con varias réplicas no certifican individualmente cada contenedor. No incluye métricas Docker, k6, transacciones ni Saga. Los monitores Python se conservan como complemento."
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  }
+}

@@ -1,0 +1,55 @@
+modules:
+  live:
+    prober: http
+    timeout: 3s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      preferred_ip_protocol: ip4
+      ip_protocol_fallback: false
+      follow_redirects: false
+      body_size_limit: 64KB
+      fail_if_body_not_matches_regexp:
+        - '"status"\s*:\s*"ok"'
+
+  ready:
+    prober: http
+    timeout: 3s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      preferred_ip_protocol: ip4
+      ip_protocol_fallback: false
+      follow_redirects: false
+      body_size_limit: 64KB
+      fail_if_body_not_matches_regexp:
+        - '"status"\s*:\s*"ok"'
+        - '"database"\s*:\s*"up"'
+
+  frontend:
+    prober: http
+    timeout: 3s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      preferred_ip_protocol: ip4
+      ip_protocol_fallback: false
+      follow_redirects: false
+      body_size_limit: 64KB
+      fail_if_body_not_matches_regexp: ['^ok$']
+
+  frontend_route:
+    prober: http
+    timeout: 3s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      preferred_ip_protocol: ip4
+      ip_protocol_fallback: false
+      follow_redirects: false
+      body_size_limit: 64KB
+      fail_if_header_not_matches:
+        - header: Content-Type
+          regexp: text/html
+          allow_missing: false
+      fail_if_body_not_matches_regexp: ['(?i)<!doctype html>']

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 // Notifications of a customer: the bell counter (total of unread_only=true), its refresh
 // rules (pages, after a change, every 60 s while visible, on visibility, per session) and
-// the /notificaciones page.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+// the /notificaciones page, including its background refresh of the list.
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../App';
@@ -13,6 +13,7 @@ import { ORDER_ID, order } from '../test/orders';
 import { admin, cart, customer, otherCustomer, signIn } from '../test/shop';
 import { makeToken } from '../test/tokens';
 import { UNREAD_POLL_MS } from './NotificationsContext';
+import { NOTIFICATIONS_POLL_MS } from '../pages/NotificationsPage';
 
 let api: FakeApi;
 let visibility: DocumentVisibilityState = 'visible';
@@ -104,7 +105,7 @@ describe('bell counter', () => {
     signIn(api, customer);
     renderAt('/');
     await waitFor(() => expect(bell().getAttribute('aria-label')).toBe('Notificaciones, 0 sin leer'));
-    expect(bell().textContent).toBe('');
+    expect(bell().querySelector('.site-nav__count')).toBeNull();
   });
 
   it('a failed read is never shown as 0', async () => {
@@ -112,15 +113,15 @@ describe('bell counter', () => {
     signIn(api, customer);
     renderAt('/');
     await waitFor(() => expect(bell().getAttribute('aria-label')).toMatch(/no se pudo consultar/));
-    expect(bell().textContent).toBe('?');
+    expect(bell().querySelector('.site-nav__count')?.textContent).toBe('?');
     expect(bell().getAttribute('aria-label')).not.toMatch(/0 sin leer/);
   });
 
   it('an admin has no bell and the app never asks for notifications', async () => {
     signIn(api, admin);
     renderAt('/');
-    await screen.findByRole('link', { name: 'Administración' });
-    expect(screen.queryByRole('link', { name: /^Notificaciones/ })).toBeNull();
+    await screen.findByRole('link', { name: 'Panel principal' });
+    expect(within(screen.getByRole('navigation', { name: 'Navegación principal' })).queryByRole('link', { name: /^Notificaciones/ })).toBeNull();
     await new Promise((r) => setTimeout(r, 20));
     expect(api.callsTo('GET /api/notifications')).toHaveLength(0);
   });
@@ -325,6 +326,108 @@ describe('notifications page', () => {
     expect(await screen.findByText('No pudimos cargar las notificaciones.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByText('Pago aprobado')).toBeTruthy();
+  });
+
+  describe('background refresh of the list', () => {
+    /** List reads wait for the test when `gate` is set; the bell counter always answers */
+    let gate: ReturnType<typeof deferred> | null = null;
+    beforeEach(() => {
+      gate = null;
+      api.on('GET', '/api/notifications', ({ url }) => {
+        if (url.searchParams.get('size') === '1') return json(200, { items: [], total: unread, page: 1, size: 1 });
+        if (gate) return gate.promise;
+        return json(200, { items, total: items.length, page: Number(url.searchParams.get('page')), size: 20 });
+      });
+    });
+    const listPage = (list: NotificationOut[]) => json(200, { items: list, total: list.length, page: 1, size: 20 });
+    const N3 = '33333333-3333-4333-8333-333333333333';
+
+    it('every 60 s while visible and on returning to the tab, keeping the list on screen', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      signIn(api, customer);
+      renderAt('/notificaciones');
+      expect(await screen.findByText('Pago aprobado')).toBeTruthy();
+      expect(listCalls()).toHaveLength(1);
+
+      // A new notification arrives; the next read is slow: the old list stays, without a spinner
+      gate = deferred();
+      await tick(NOTIFICATIONS_POLL_MS);
+      expect(listCalls()).toHaveLength(2);
+      expect(screen.getByText('Pago aprobado')).toBeTruthy();
+      expect(screen.queryByText('Cargando notificaciones…')).toBeNull();
+      gate.resolve(listPage([notification(N3, { title: 'Pago rechazado' }), ...items]));
+      expect(await screen.findByText('Pago rechazado')).toBeTruthy();
+      gate = null;
+
+      // Hidden tab: no reads; visible again: one read at once, with the same page and filter
+      setVisibility('hidden');
+      await tick(NOTIFICATIONS_POLL_MS * 3);
+      expect(listCalls()).toHaveLength(2);
+      setVisibility('visible');
+      await waitFor(() => expect(listCalls()).toHaveLength(3));
+      const last = listCalls().at(-1)!.url.searchParams;
+      expect([last.get('page'), last.get('size'), last.get('unread_only')]).toEqual(['1', '20', null]);
+    });
+
+    it('never overlaps, is cancelled by a filter change and its late answer is ignored', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      signIn(api, customer);
+      renderAt('/notificaciones');
+      await screen.findByText('Pago aprobado');
+      const slow = deferred();
+      gate = slow;
+      await tick(NOTIFICATIONS_POLL_MS);
+      setVisibility('visible');
+      setVisibility('visible');
+      expect(listCalls()).toHaveLength(2); // the running read is not repeated
+
+      gate = null;
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Solo no leídas' }));
+      await waitFor(() => expect(listCalls().at(-1)!.url.searchParams.get('unread_only')).toBe('true'));
+      expect(listCalls()[1]!.init?.signal?.aborted).toBe(true);
+      await screen.findByText('Pago aprobado');
+      slow.resolve(listPage([notification(N3, { title: 'Respuesta antigua' })]));
+      await tick(0);
+      expect(screen.queryByText('Respuesta antigua')).toBeNull();
+    });
+
+    it('an answer requested before marking as read does not bring "Nueva" back', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      signIn(api, customer);
+      api.on('PATCH', `/api/notifications/${N1}/read`, () => json(200, notification(N1, { is_read: true, read_at: '2026-10-22T22:00:00Z' })));
+      renderAt('/notificaciones');
+      await screen.findByText('Pago aprobado');
+      const slow = deferred();
+      gate = slow;
+      await tick(NOTIFICATIONS_POLL_MS);
+      expect(listCalls()).toHaveLength(2);
+      fireEvent.click(screen.getByRole('button', { name: 'Marcar como leída' }));
+      await waitFor(() => expect(screen.queryByText('Nueva')).toBeNull());
+      slow.resolve(listPage(items)); // read before the change: N1 still unread there
+      await tick(0);
+      expect(screen.queryByText('Nueva')).toBeNull();
+    });
+
+    it('a failed background read keeps the list and leaving the page stops the refresh', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      signIn(api, customer);
+      api.on('GET', `/api/orders/${ORDER_ID}`, () => json(200, order({ status: 'PAID', inventory_status: 'CONFIRMED' })));
+      renderAt('/notificaciones');
+      await screen.findByText('Pago aprobado');
+      gate = deferred();
+      gate.resolve(json(503, { detail: 'unavailable' }));
+      await tick(NOTIFICATIONS_POLL_MS);
+      await waitFor(() => expect(listCalls()).toHaveLength(2));
+      expect(screen.getByText('Pago aprobado')).toBeTruthy();
+      expect(screen.queryByText('No pudimos cargar las notificaciones.')).toBeNull();
+      gate = null;
+
+      fireEvent.click(screen.getAllByRole('link', { name: 'Ver pedido' })[0]!);
+      await screen.findByRole('heading', { name: 'Pedido 0B9A6C1E' });
+      await tick(NOTIFICATIONS_POLL_MS * 2);
+      setVisibility('visible');
+      expect(listCalls()).toHaveLength(2);
+    });
   });
 
   it('titles and messages are text: HTML from the server is never interpreted', async () => {

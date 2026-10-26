@@ -1,0 +1,152 @@
+[
+  {
+    "targets": [
+      "http://user-service:8000/health/live"
+    ],
+    "labels": {
+      "component": "user-service",
+      "probe": "live",
+      "module": "live"
+    }
+  },
+  {
+    "targets": [
+      "http://user-service:8000/health/ready"
+    ],
+    "labels": {
+      "component": "user-service",
+      "probe": "ready",
+      "module": "ready"
+    }
+  },
+  {
+    "targets": [
+      "http://product-service:8000/health/live"
+    ],
+    "labels": {
+      "component": "product-service",
+      "probe": "live",
+      "module": "live"
+    }
+  },
+  {
+    "targets": [
+      "http://product-service:8000/health/ready"
+    ],
+    "labels": {
+      "component": "product-service",
+      "probe": "ready",
+      "module": "ready"
+    }
+  },
+  {
+    "targets": [
+      "http://inventory-service:8000/health/live"
+    ],
+    "labels": {
+      "component": "inventory-service",
+      "probe": "live",
+      "module": "live"
+    }
+  },
+  {
+    "targets": [
+      "http://inventory-service:8000/health/ready"
+    ],
+    "labels": {
+      "component": "inventory-service",
+      "probe": "ready",
+      "module": "ready"
+    }
+  },
+  {
+    "targets": [
+      "http://order-service:8000/health/live"
+    ],
+    "labels": {
+      "component": "order-service",
+      "probe": "live",
+      "module": "live"
+    }
+  },
+  {
+    "targets": [
+      "http://order-service:8000/health/ready"
+    ],
+    "labels": {
+      "component": "order-service",
+      "probe": "ready",
+      "module": "ready"
+    }
+  },
+  {
+    "targets": [
+      "http://payment-service:8000/health/live"
+    ],
+    "labels": {
+      "component": "payment-service",
+      "probe": "live",
+      "module": "live"
+    }
+  },
+  {
+    "targets": [
+      "http://payment-service:8000/health/ready"
+    ],
+    "labels": {
+      "component": "payment-service",
+      "probe": "ready",
+      "module": "ready"
+    }
+  },
+  {
+    "targets": [
+      "http://notification-service:8000/health/live"
+    ],
+    "labels": {
+      "component": "notification-service",
+      "probe": "live",
+      "module": "live"
+    }
+  },
+  {
+    "targets": [
+      "http://notification-service:8000/health/ready"
+    ],
+    "labels": {
+      "component": "notification-service",
+      "probe": "ready",
+      "module": "ready"
+    }
+  },
+  {
+    "targets": [
+      "http://gateway/health"
+    ],
+    "labels": {
+      "component": "gateway",
+      "probe": "edge",
+      "module": "live"
+    }
+  },
+  {
+    "targets": [
+      "http://frontend:8080/healthz"
+    ],
+    "labels": {
+      "component": "frontend",
+      "probe": "edge",
+      "module": "frontend"
+    }
+  },
+  {
+    "targets": [
+      "http://gateway/"
+    ],
+    "labels": {
+      "component": "frontend",
+      "probe": "route",
+      "module": "frontend_route"
+    }
+  }
+]

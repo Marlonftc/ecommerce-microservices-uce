@@ -73,10 +73,10 @@ export function OrdersPage() {
       )}
       {result.status === 'ready' && result.page.total === 0 && (
         <EmptyState
-          title="Todavía no hay pedidos"
-          description="Cuando confirmes una compra, aparecerá aquí."
+          title={isAdmin ? 'No hay pedidos registrados' : 'Todavía no hay pedidos'}
+          description={isAdmin ? 'Los pedidos de los clientes aparecerán aquí para su consulta.' : 'Cuando confirmes una compra, aparecerá aquí.'}
           action={
-            <Link to="/productos" className="btn btn--primary">
+            !isAdmin && <Link to="/productos" className="btn btn--primary">
               Ver catálogo
             </Link>
           }

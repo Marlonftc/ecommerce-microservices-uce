@@ -39,6 +39,15 @@
   height: 2rem;
 }
 
+.brand__crest {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+}
+
 .brand__sub {
   font-family: var(--font-sans);
   font-weight: 400;
@@ -68,6 +77,48 @@
   color: #fff;
   box-shadow: inset 0 -2px 0 #fff;
   border-radius: 0;
+}
+
+/* Management links reuse the existing routes without crowding the session header. */
+.admin-nav {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-nav__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.35rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.admin-nav__link {
+  display: flex;
+  align-items: center;
+  min-height: 2.85rem;
+  padding: 0.65rem 0.8rem;
+  border-bottom: 2px solid transparent;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.admin-nav__link:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.admin-nav__link[aria-current='page'] {
+  color: var(--color-primary-strong);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .admin-nav__links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-nav__link { padding: 0.65rem 0.5rem; }
 }
 
 .site-main {

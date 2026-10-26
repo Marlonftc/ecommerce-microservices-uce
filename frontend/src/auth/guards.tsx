@@ -55,17 +55,19 @@ export function RequireRole({ role }: { role: Role }) {
 
 /**
  * Login and register. As soon as there is a session (also right after logging in or
- * registering on these pages) the user goes to the page they wanted, or to `fallback`.
+ * registering on these pages) customers return to their destination or `fallback`;
+ * administrators enter the management panel.
  * This guard is the only place that decides that destination, so two redirects
  * cannot race each other.
  */
 export function GuestOnly({ fallback = '/' }: { fallback?: string }) {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const location = useLocation();
   if (status === 'loading') return <SessionLoading />;
   if (status === 'authenticated') {
     const from = (location.state as { from?: unknown } | null)?.from;
-    return <Navigate to={from === undefined ? fallback : safeReturnPath(from)} replace />;
+    const destination = user?.role === 'admin' ? '/admin' : from === undefined ? fallback : safeReturnPath(from);
+    return <Navigate to={destination} replace />;
   }
   return <Outlet />;
 }

@@ -5,12 +5,8 @@ import { useNotifications } from '../notifications/NotificationsContext';
 
 function BrandMark() {
   return (
-    <svg className="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="7" fill="#1d4f91" />
-      <path d="M8 10h2.4l2.2 9.2h9.6L24 12.5H12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="14" cy="23.5" r="1.6" fill="#fff" />
-      <circle cx="21" cy="23.5" r="1.6" fill="#fff" />
-    </svg>
+    <img className="brand__crest" src="/images/uce-crest.png" width={192} height={192}
+      alt="Universidad Central del Ecuador" decoding="async" />
   );
 }
 
@@ -54,6 +50,7 @@ function NotificationsLink() {
   return (
     <NavLink to="/notificaciones" className="site-nav__link site-nav__bell" aria-label={label} title={label}>
       <BellIcon />
+      <span>Notificaciones</span>
       {unread !== null && unread > 0 && (
         <span className="site-nav__count" aria-hidden="true">
           {unread > 99 ? '99+' : unread}
@@ -75,19 +72,16 @@ function SessionNav() {
   if (status === 'authenticated' && user) {
     return (
       <>
-        <CartLink />
-        <NavLink to="/pedidos" className="site-nav__link">
-          {user.role === 'admin' ? 'Pedidos' : 'Mis pedidos'}
-        </NavLink>
-        {user.role === 'customer' && <NotificationsLink />}
+        {user.role === 'customer' && (
+          <>
+            <CartLink />
+            <NavLink to="/pedidos" className="site-nav__link">Mis pedidos</NavLink>
+            <NotificationsLink />
+          </>
+        )}
         <NavLink to="/cuenta" className="site-nav__link">
           Mi cuenta
         </NavLink>
-        {user.role === 'admin' && (
-          <NavLink to="/admin" className="site-nav__link">
-            Administración
-          </NavLink>
-        )}
         <span className="site-nav__user" title={user.email}>
           {user.full_name}
         </span>
@@ -119,27 +113,48 @@ function SessionNav() {
   return null; // loading or unavailable: no session links yet
 }
 
+/** Existing management routes, separated from the customer's shopping navigation. */
+function AdminNav() {
+  return (
+    <nav className="admin-nav" aria-label="Navegación administrativa">
+      <div className="container admin-nav__links">
+        <NavLink to="/admin/productos" className="admin-nav__link">Productos e inventario</NavLink>
+        <NavLink to="/pedidos" className="admin-nav__link">Pedidos</NavLink>
+        <NavLink to="/admin/usuarios" className="admin-nav__link">Usuarios</NavLink>
+        <NavLink to="/admin/operaciones" className="admin-nav__link">Operaciones pendientes de la Saga</NavLink>
+        <NavLink to="/admin/notificaciones" className="admin-nav__link">Notificaciones administrativas</NavLink>
+      </div>
+    </nav>
+  );
+}
+
 export function Layout() {
+  const { status, user } = useAuth();
+  const isAdmin = status === 'authenticated' && user?.role === 'admin';
+
   return (
     <div className="app-shell">
       <header className="site-header">
         <div className="container site-header__inner">
-          <Link to="/" className="brand">
+          <Link to={isAdmin ? '/admin' : '/'} className="brand" aria-label={isAdmin ? 'E-Commerce UCE, panel principal' : 'E-Commerce UCE, inicio'}>
             <BrandMark />
             <span>E-Commerce UCE</span>
-            <span className="brand__sub">Tienda de tecnología</span>
+            <span className="brand__sub">{isAdmin ? 'Administración de la plataforma' : 'Tienda de tecnología'}</span>
           </Link>
           <nav className="site-nav" aria-label="Navegación principal">
-            <NavLink to="/" end className="site-nav__link">
-              Inicio
-            </NavLink>
-            <NavLink to="/productos" className="site-nav__link">
-              Catálogo
-            </NavLink>
+            {isAdmin ? (
+              <NavLink to="/admin" end className="site-nav__link">Panel principal</NavLink>
+            ) : (
+              <>
+                <NavLink to="/" end className="site-nav__link">Inicio</NavLink>
+                <NavLink to="/productos" className="site-nav__link">Catálogo</NavLink>
+              </>
+            )}
             <SessionNav />
           </nav>
         </div>
       </header>
+      {isAdmin && <AdminNav />}
       <main className="site-main" id="contenido">
         <div className="container">
           <Outlet />

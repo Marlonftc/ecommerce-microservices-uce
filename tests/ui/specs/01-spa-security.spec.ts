@@ -9,7 +9,7 @@ const CSP =
 
 test('direct reload of application routes shows the page, never a 404', async ({ page }) => {
   const routes: Array<[string, RegExp | string]> = [
-    ['/', /^Una tienda de tecnología/],
+    ['/', 'Tecnología para lo que viene.'],
     ['/productos', 'Catálogo'],
     ['/login', 'Iniciar sesión'],
     ['/registro', 'Crear cuenta'],

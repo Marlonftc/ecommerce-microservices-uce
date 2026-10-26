@@ -1,0 +1,11 @@
+# Optional overlay AFTER compose.load.yaml; paths resolve from the main Compose.
+# The original ecommerce-net attachment is retained by Compose merging.
+services:
+  k6:
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    external: true
+    name: uce-observability_monitoring

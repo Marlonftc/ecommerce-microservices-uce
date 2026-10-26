@@ -1,0 +1,486 @@
+# Isolated fixtures only; never loaded by the running Prometheus.
+{
+  "rule_files": [
+    "rules.yml"
+  ],
+  "evaluation_interval": "5s",
+  "tests": [
+    {
+      "name": "both checks pass",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ready fails while live passes",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "0+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "live fails",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "0+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "0+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no samples is UNKNOWN",
+      "interval": "5s",
+      "input_series": [],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing ready is UNKNOWN",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "exporter failure is UNKNOWN",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "0+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "0+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "old samples are UNKNOWN before lookback expires",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "40s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "one confirmed fall and recovery",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1 1 1 0 0 1 1 1 1"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "40s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 3
+            }
+          ]
+        },
+        {
+          "expr": "sum_over_time(uce:down_transition{component=\"user-service\"}[40s])",
+          "eval_time": "40s",
+          "exp_samples": [
+            {
+              "labels": "{component=\"user-service\"}",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "expr": "sum_over_time(uce:recovery_transition{component=\"user-service\"}[40s])",
+          "eval_time": "40s",
+          "exp_samples": [
+            {
+              "labels": "{component=\"user-service\"}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown gap does not fabricate recovery",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"live\",instance=\"http://user-service:8000/health/live\"}",
+          "values": "1 1 0 0 1 1 1 1 1"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"user-service\",probe=\"ready\",instance=\"http://user-service:8000/health/ready\"}",
+          "values": "1 1 0 0 1 1 1 1 1"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:component_state{component=\"user-service\"}",
+          "eval_time": "40s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"user-service\"}",
+              "value": 3
+            }
+          ]
+        },
+        {
+          "expr": "sum_over_time(uce:down_transition{component=\"user-service\"}[40s])",
+          "eval_time": "40s",
+          "exp_samples": [
+            {
+              "labels": "{component=\"user-service\"}",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "expr": "sum_over_time(uce:recovery_transition{component=\"user-service\"}[40s])",
+          "eval_time": "40s",
+          "exp_samples": [
+            {
+              "labels": "{component=\"user-service\"}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "frontend route available",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"gateway\",probe=\"edge\",instance=\"http://gateway/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"gateway\",probe=\"edge\",instance=\"http://gateway/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"frontend\",probe=\"edge\",instance=\"http://frontend/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"frontend\",probe=\"edge\",instance=\"http://frontend/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"frontend\",probe=\"route\",instance=\"http://frontend/route\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"frontend\",probe=\"route\",instance=\"http://frontend/route\"}",
+          "values": "1+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:frontend_route_state",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:frontend_route_state",
+              "value": 3
+            }
+          ]
+        },
+        {
+          "expr": "uce:component_state{component=\"frontend\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"frontend\"}",
+              "value": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "frontend route degraded with gateway up",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"gateway\",probe=\"edge\",instance=\"http://gateway/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"gateway\",probe=\"edge\",instance=\"http://gateway/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"frontend\",probe=\"edge\",instance=\"http://frontend/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"frontend\",probe=\"edge\",instance=\"http://frontend/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"frontend\",probe=\"route\",instance=\"http://frontend/route\"}",
+          "values": "0+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"frontend\",probe=\"route\",instance=\"http://frontend/route\"}",
+          "values": "1+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:frontend_route_state",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:frontend_route_state",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "expr": "uce:component_state{component=\"frontend\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"frontend\"}",
+              "value": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gateway outage does not blame frontend route",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"gateway\",probe=\"edge\",instance=\"http://gateway/edge\"}",
+          "values": "0+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"gateway\",probe=\"edge\",instance=\"http://gateway/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"frontend\",probe=\"edge\",instance=\"http://frontend/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"frontend\",probe=\"edge\",instance=\"http://frontend/edge\"}",
+          "values": "1+0x12"
+        },
+        {
+          "series": "probe_success{job=\"blackbox\",component=\"frontend\",probe=\"route\",instance=\"http://frontend/route\"}",
+          "values": "0+0x12"
+        },
+        {
+          "series": "up{job=\"blackbox\",component=\"frontend\",probe=\"route\",instance=\"http://frontend/route\"}",
+          "values": "1+0x12"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "uce:frontend_route_state",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:frontend_route_state",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "expr": "uce:component_state{component=\"frontend\"}",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "uce:component_state{component=\"frontend\"}",
+              "value": 3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

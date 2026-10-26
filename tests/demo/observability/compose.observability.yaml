@@ -1,0 +1,113 @@
+# HTTP probes plus internal k6 Remote Write. Use --env-file compose.vars.
+name: uce-observability
+
+services:
+  blackbox:
+    image: prom/blackbox-exporter:v0.29.1
+    command: ["--config.file=/etc/blackbox/config.yml", "--log.level=warn"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 64
+    volumes:
+      - ./blackbox.yml:/etc/blackbox/config.yml:ro
+    networks:
+      - monitoring
+      - application
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9115/metrics"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=24h
+      - --storage.tsdb.retention.size=256MB
+      - --storage.tsdb.wal-segment-size=32MB
+      - --query.max-concurrency=4
+      - --query.timeout=10s
+      - --log.level=warn
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 384m
+    cpus: 0.50
+    pids_limit: 128
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./targets.json:/etc/prometheus/targets.json:ro
+      - ./rules.yml:/etc/prometheus/rules.yml:ro
+      - prometheus-data:/prometheus
+    networks: [monitoring]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      # Local viewer only; do not create or reuse an administrator credential.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_DEFAULT_THEME: light
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/uce-observability.json
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_PLUGINS_PUBLIC_KEY_RETRIEVAL_DISABLED: "true"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_LOG_MODE: console
+      GF_LOG_LEVEL: warn
+      GF_SERVER_ROOT_URL: http://127.0.0.1:3000/
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    cpus: 0.50
+    pids_limit: 256
+    tmpfs:
+      - /tmp:size=32m
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks: [monitoring]
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 6
+
+networks:
+  monitoring:
+  application:
+    # Verified using Docker network labels before this stack was created.
+    external: true
+    name: ecommerce-uce_ecommerce-net
+
+volumes:
+  prometheus-data:
+  grafana-data:

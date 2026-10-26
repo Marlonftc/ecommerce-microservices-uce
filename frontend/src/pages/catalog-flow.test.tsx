@@ -244,7 +244,8 @@ describe('product page', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Agregar al carrito' }));
     expect(await screen.findByText('Producto agregado. Tienes 1 en tu carrito.')).toBeTruthy();
     expect(putCalls(1)[0]!.body).toEqual({ quantity: 1, expected_version: 0 });
-    expect(screen.getByRole('link', { name: 'Carrito, 1 unidad' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ver carrito' }).getAttribute('href')).toBe('/carrito');
+    expect(within(screen.getByRole('navigation', { name: 'Navegación principal' })).queryByRole('link', { name: /^Carrito/ })).toBeNull();
   });
 
   it('adds to what the cart already has: PUT sends the absolute total and the last version', async () => {
