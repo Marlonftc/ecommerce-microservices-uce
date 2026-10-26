@@ -139,6 +139,7 @@ los dos primeros comandos.
 | Pruebas | Cómo | Detalle |
 |---|---|---|
 | Frontend (Vitest) | `cd frontend; npm ci; npm run typecheck; npm run test; npm run build` | `frontend/README.md` |
+| Backend completo, 575 casos (pytest) | PostgreSQL desechable y aislado, sin usar el Compose ni la base activa; Windows, Python 3.12 y Docker Desktop | `tests/backend/README.md` |
 | Cada microservicio (pytest) | Desde la carpeta del servicio, con PostgreSQL publicado por `compose.override.example.yaml` | `docs/testing/01` a `07` |
 | Gateway (pytest) | `docker compose -f compose.yaml -f compose.override.example.yaml up -d --build` y `backend\order-service\.venv\Scripts\python.exe -m pytest tests\gateway -v` | `tests/gateway/README.md` |
 | E2E de la API (pytest) | Sistema con `compose.e2e.yaml` y `backend\order-service\.venv\Scripts\python.exe -m pytest tests\e2e -v` | `tests/e2e/README.md` |
@@ -185,12 +186,14 @@ docker compose down       # elimina contenedores y redes; los datos de PostgreSQ
 | La interfaz muestra (u oculta) las opciones de pago sin esperarlo | Revisar la etiqueta `uce.payment-demo` y si hay una variable `VITE_PAYMENT_DEMO` en la terminal |
 | `/` responde `UPSTREAM_UNAVAILABLE` | El frontend está detenido o arrancando: `docker compose up -d frontend`; la API sigue funcionando |
 
-## Limitaciones
+## Alcance y decisiones de diseño
 
-- Mientras un pedido está en proceso de compra, el carrito no se puede modificar. Si el pago se aprueba, el carrito se vacía; si se rechaza o se cancela el pedido, se conserva.
-- Se usa una sola instancia de PostgreSQL con una base de datos y un usuario por servicio, por lo que el aislamiento es lógico y no físico.
-- Los pagos y las notificaciones son simulados. No se procesan tarjetas, dinero real ni webhooks financieros. Se conserva el simulador para la entrega académica y Stripe Checkout Sandbox queda como posible trabajo futuro: [decisión D22, escenarios y coordinación de la Saga](docs/architecture/decisiones.md#d22-pagos-simulados-y-alcance-de-la-entrega-académica).
-- Los tokens de acceso duran 30 minutos. Desactivar un usuario o cambiar su rol no invalida los tokens que ya tenía: los servicios que solo verifican la firma seguirán aceptándolos hasta que expiren.
-- El sistema se sirve por HTTP en `127.0.0.1`. Un despliegue real necesitaría TLS (y entonces HSTS).
+El proyecto se diseñó para un entorno local de desarrollo y pruebas, como pide el caso de estudio. Estas decisiones definen su alcance:
+
+- **Carrito durante la compra.** Mientras un pedido está en proceso, el carrito queda reservado para él; así el pedido y el carrito siempre coinciden. Si el pago se aprueba, el carrito se vacía; si se rechaza o se cancela el pedido, se conserva.
+- **Base de datos por servicio.** Cada servicio tiene su propia base y su propio usuario dentro de una instancia de PostgreSQL, y ningún servicio accede a la base de otro. En producción, cada base podría trasladarse a su propia instancia sin cambiar el código.
+- **Pagos y notificaciones.** El servicio de pagos simula los resultados (aprobado, rechazado y aprobación lenta) para demostrar la coordinación de la Saga y la recuperación ante fallos; no procesa tarjetas ni dinero real. Integrar una pasarela como Stripe Checkout Sandbox es una ampliación prevista: [decisión D22, escenarios y coordinación de la Saga](docs/architecture/decisiones.md#d22-pagos-simulados-y-alcance-de-la-entrega-académica). Las notificaciones se registran en la plataforma y el cliente las consulta en su cuenta.
+- **Sesiones.** Los tokens de acceso duran 30 minutos y cada servicio los valida de forma independiente, sin consultar a user-service. Un cambio de rol o una desactivación se aplica cuando el token vigente expira.
+- **Transporte.** En local, el sistema se sirve por HTTP en `127.0.0.1`. Para un despliegue público, TLS (y HSTS) se configuraría en el gateway, sin cambios en los servicios.
 
 Las decisiones de diseño están en [docs/architecture/decisiones.md](docs/architecture/decisiones.md).
