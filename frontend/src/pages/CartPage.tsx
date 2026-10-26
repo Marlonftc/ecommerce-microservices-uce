@@ -236,8 +236,16 @@ interface CartLineProps {
 }
 
 function CartLine({ item, pricesAvailable, frozen, onSetQuantity, onRemove }: CartLineProps) {
+  // The field starts with the confirmed quantity and follows it only when order-service
+  // reports a different one (after saving, or a change made elsewhere). The comparison runs
+  // during render, not in an effect: an effect runs after the line is shown and, on a busy
+  // machine, it could run after the first keystroke and put the old quantity back (H-07).
   const [draft, setDraft] = useState(String(item.quantity));
-  useEffect(() => setDraft(String(item.quantity)), [item.quantity]);
+  const [syncedQuantity, setSyncedQuantity] = useState(item.quantity);
+  if (item.quantity !== syncedQuantity) {
+    setSyncedQuantity(item.quantity);
+    setDraft(String(item.quantity));
+  }
 
   const name = item.name ?? `Producto #${item.product_id}`;
   // PUT needs product-service: without prices, or for a deactivated product, it would fail

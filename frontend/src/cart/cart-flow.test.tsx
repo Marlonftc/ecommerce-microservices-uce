@@ -3,6 +3,8 @@
 // order-service behind the gateway. Covers versions, conflicts, uncertain outcomes,
 // old answers and a change of user while a request is running.
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+// Plain DOM events, outside act(): used to type at a moment React has not finished with the line
+import { fireEvent as domFireEvent } from '@testing-library/dom';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../App';
@@ -137,6 +139,58 @@ describe('changing the cart', () => {
     expect(await screen.findByText('Cantidad actualizada.')).toBeTruthy();
     expect(api.callsTo('PUT /api/cart/items/2').map((c) => c.body)).toEqual([{ quantity: 4, expected_version: 5 }]);
     expect(screen.getByRole('link', { name: 'Carrito, 6 unidades' })).toBeTruthy();
+    // The field shows the saved quantity, which is now the confirmed one: nothing left to update
+    expect((screen.getByLabelText('Cantidad de Mouse inalámbrico') as HTMLInputElement).value).toBe('4');
+    expect(within(line('Mouse inalámbrico')).queryByRole('button', { name: 'Actualizar' })).toBeNull();
+  });
+
+  it('H-07: a quantity typed right after the line appears is kept on a busy machine', async () => {
+    // Every scheduler time check sees 6 ms more, as on a loaded machine: React yields after each
+    // unit of work, so the line is on screen before React has finished with it. The previous
+    // effect-based synchronisation put "1" back here in every run.
+    const realNow = performance.now.bind(performance);
+    let skew = 0;
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => (skew += 6) + realNow());
+    try {
+      api.on('PUT', '/api/cart/items/2', () => json(200, cart(6, [TWO_LINES[0]!, { ...TWO_LINES[1]!, quantity: 4 }])));
+      const typed = new Promise<void>((resolve) => {
+        const observer = new MutationObserver(() => {
+          const input = document.getElementById('qty-2') as HTMLInputElement | null;
+          if (!input) return;
+          observer.disconnect();
+          // Runs as soon as the field exists, before anything else React had scheduled
+          domFireEvent.change(input, { target: { value: '4' } });
+          resolve();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+      renderAt('/carrito');
+      await typed;
+      const update = await within(await waitFor(() => line('Mouse inalámbrico'))).findByRole('button', { name: 'Actualizar' });
+      expect((screen.getByLabelText('Cantidad de Mouse inalámbrico') as HTMLInputElement).value).toBe('4');
+      clock.mockRestore();
+      await waitFor(() => expect(button('Vaciar carrito').disabled).toBe(false));
+      fireEvent.click(update);
+      expect(await screen.findByText('Cantidad actualizada.')).toBeTruthy();
+      expect(api.callsTo('PUT /api/cart/items/2').map((c) => c.body)).toEqual([{ quantity: 4, expected_version: 5 }]);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it('re-reading a cart with the same quantity keeps what the user is typing', async () => {
+    renderAt('/carrito');
+    await screen.findByRole('link', { name: 'Mouse inalámbrico' });
+    fireEvent.change(screen.getByLabelText('Cantidad de Mouse inalámbrico'), { target: { value: '7' } });
+    const readsBefore = api.callsTo('GET /api/cart').length;
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await waitFor(() => expect(api.callsTo('GET /api/cart').length).toBe(readsBefore + 1));
+    await waitFor(() => expect(button('Vaciar carrito').disabled).toBe(false));
+    expect((screen.getByLabelText('Cantidad de Mouse inalámbrico') as HTMLInputElement).value).toBe('7');
+    expect(within(line('Mouse inalámbrico')).getByRole('button', { name: 'Actualizar' })).toBeTruthy();
+    expect(api.callsTo('PUT /api/cart/items/2')).toHaveLength(0);
   });
 
   it('invalid quantities in a line are not sent', async () => {
