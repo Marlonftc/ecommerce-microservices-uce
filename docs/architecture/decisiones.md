@@ -25,7 +25,7 @@ Decisiones aprobadas antes de iniciar la implementación (Fase 4). D19 y siguien
 | D19 | Administración de cuentas con `PATCH /users/{id}` (solo `role` e `is_active`), sin borrado físico; cambios serializados con `pg_advisory_xact_lock` | Desactivar es reversible y conserva la relación con los pedidos. El bloqueo asesor, la relectura del administrador desde PostgreSQL y el bloqueo `FOR UPDATE` de la cuenta destino garantizan que siempre quede al menos un administrador activo, incluso con cambios simultáneos. Un administrador no puede modificar su propia cuenta |
 | D20 | El frontend es un contenedor propio (Nginx sin privilegios) detrás del gateway; el gateway sirve React en `/` y la API en `/api` | Un solo origen y un solo puerto publicado: sin CORS y sin exponer otro puerto. El frontend solo está en `ecommerce-net`, con sistema de archivos de solo lectura y sin credenciales. Cualquier ruta fuera de `/api` devuelve `index.html` (navegación SPA); una ruta `/api` desconocida sigue en 404 JSON sin reenviarse, y las barreras de `/internal` se evalúan antes. El gateway no depende del frontend: si se detiene, la API sigue funcionando |
 | D21 | Cabeceras de seguridad y CSP estricta (`'self'`, sin `unsafe-inline` ni `unsafe-eval`) declaradas una sola vez en el gateway | El build de Vite no tiene código en línea. En Nginx una `location` con `add_header` propio deja de heredar las del servidor, por eso las cabeceras están en un archivo incluido en el servidor y en `@rate_limited`. Sin HSTS ni `upgrade-insecure-requests`, porque el sistema se sirve por HTTP en 127.0.0.1. `VITE_PAYMENT_DEMO` es un valor de compilación: el build normal usa `false` y el de pruebas E2E usa `true` con otra etiqueta de imagen |
-| D22 | Conservar el simulador de pagos para la entrega del complexivo; Stripe Checkout Sandbox queda como posible trabajo futuro | Preservar la estabilidad de la Saga, la idempotencia y la recuperación existentes. Los escenarios controlados permiten demostrar aprobación, rechazo y respuesta tardía sin depender de un proveedor externo; no se procesan tarjetas ni dinero real (ver detalle abajo) |
+| D22 | Conservar el simulador de pagos para la entrega del complexivo; la integración con una pasarela de pagos externa queda como posible trabajo futuro | Preservar la estabilidad de la Saga, la idempotencia y la recuperación existentes. Los escenarios controlados permiten demostrar aprobación, rechazo y respuesta tardía sin depender de un proveedor externo; no se procesan tarjetas ni dinero real (ver detalle abajo) |
 
 ## D11: efecto de desactivar o cambiar el rol de un usuario
 
@@ -41,7 +41,7 @@ La ausencia de revocación inmediata es una **limitación de seguridad del MVP**
 
 ## D22: pagos simulados y alcance de la entrega académica
 
-**Decisión aprobada el 2026-10-24:** mantener el simulador actual (opción B). Stripe Checkout Sandbox se considera una posible ampliación futura y no forma parte de la entrega actual.
+**Decisión aprobada el 2026-10-24:** mantener el simulador actual (opción B). La integración con una pasarela de pagos externa se considera una posible ampliación futura y no forma parte de la entrega actual.
 
 El objetivo es demostrar la coordinación entre microservicios y su recuperación ante fallos con escenarios reproducibles. El simulador permite observar resultados de pago conocidos y una respuesta incierta para el llamador, conservando los contratos y las protecciones existentes. Incorporar una pasarela externa exigiría revisar persistencia, vencimientos y eventos asíncronos, con riesgo de regresiones en la Saga. Esta decisión delimita el alcance técnico; no constituye una integración financiera ni una certificación de pagos reales.
 
@@ -79,17 +79,17 @@ Los detalles están en [payment_flow.py](../../backend/order-service/app/service
 
 - No se solicitan, almacenan ni procesan datos de tarjetas; los contratos de pago rechazan campos adicionales de tarjeta.
 - No se mueve dinero real ni se realizan autorizaciones, capturas o reembolsos financieros.
-- No existe integración con Stripe ni recepción o verificación de webhooks de proveedores financieros.
+- No existe integración con pasarelas de pago externas ni recepción o verificación de webhooks de proveedores financieros.
 - payment-service confía en el importe enviado por order-service mediante el contrato interno autenticado; no consulta a una entidad financiera.
 - Los modos son deterministas: no reproducen todos los estados, autenticaciones o plazos de un proveedor real. Tras un rechazo, el mismo pedido no admite otro pago; se requiere un nuevo pedido.
 
-### Stripe Checkout Sandbox como posible trabajo futuro
+### Pasarela de pagos externa como posible trabajo futuro
 
-Una ampliación opcional debería conservar el simulador y elegir el proveedor de forma explícita, sin aprobar automáticamente mediante simulación cuando Stripe no responda. Antes de implementarla se deben resolver, al menos, estos puntos:
+Una ampliación opcional debería conservar el simulador y elegir el proveedor de forma explícita, sin aprobar automáticamente mediante simulación cuando el proveedor no responda. Antes de implementarla se deben resolver, al menos, estos puntos:
 
-- **Vencimiento:** Checkout permite configurar la expiración automática de la sesión entre 30 minutos y 24 horas desde su creación, frente a la reserva local predeterminada de 15 minutos. Para mantener el plazo local habría que cerrar la sesión externa y confirmar que no se pagó antes de liberar inventario; ante un resultado incierto, continuar la reconciliación. No basta con aplicar el vencimiento actual a `PAYMENT_PENDING`. Véanse [creación](https://docs.stripe.com/api/checkout/sessions/create) y [expiración de sesiones](https://docs.stripe.com/api/checkout/sessions/expire).
-- **Eventos asíncronos:** el retorno del navegador no debe marcar un pedido como pagado. Los webhooks requieren firma verificada sobre el cuerpo original, persistencia durable y tratamiento de duplicados y eventos desordenados. Los estados externos deben traducirse explícitamente al contrato local; un estado desconocido no equivale a rechazo. Véase [webhooks de Stripe](https://docs.stripe.com/webhooks).
-- **Idempotencia:** conservar una intención y sesión vinculadas al pedido, claves estables ante timeouts y restricciones locales por sesión, pago y evento. La idempotencia de la API externa no sustituye estas garantías persistentes. Deben probarse concurrencia, reinicios y carreras entre pago y expiración. Véase [idempotencia de Stripe](https://docs.stripe.com/api/idempotent_requests).
-- **Disponibilidad:** antes de retomar el trabajo, comprobar el acceso legítimo a una cuenta Sandbox desde Ecuador, sus permisos, los métodos disponibles y la conectividad para API y eventos. La disponibilidad comercial por país y el acceso a pruebas son cuestiones distintas; esta decisión no garantiza el acceso de una cuenta concreta. Consultar [países admitidos](https://stripe.com/global) y [configuración de cuentas y Sandbox](https://docs.stripe.com/get-started/account/set-up).
+- **Vencimiento:** el plazo de la sesión de pago del proveedor puede no coincidir con la reserva local predeterminada de 15 minutos. Antes de liberar inventario habría que cerrar la sesión externa y confirmar que no se pagó; ante un resultado incierto, continuar la reconciliación. No basta con aplicar el vencimiento actual a `PAYMENT_PENDING`.
+- **Eventos asíncronos:** el retorno del navegador no debe marcar un pedido como pagado. Las notificaciones del proveedor (webhooks) requieren firma verificada sobre el cuerpo original, persistencia durable y tratamiento de duplicados y eventos desordenados. Los estados externos deben traducirse explícitamente al contrato local; un estado desconocido no equivale a rechazo.
+- **Idempotencia:** conservar una intención y sesión vinculadas al pedido, claves estables ante timeouts y restricciones locales por sesión, pago y evento. La idempotencia de la API externa no sustituye estas garantías persistentes. Deben probarse concurrencia, reinicios y carreras entre pago y expiración.
+- **Disponibilidad:** comprobar el acceso a un entorno de pruebas del proveedor desde Ecuador, sus permisos, los métodos disponibles y la conectividad para API y eventos.
 
-La ampliación requeriría autorización independiente y pruebas de regresión de ambos métodos. No se incorporan ahora dependencias, credenciales, rutas, estados, migraciones ni cambios de interfaz para Stripe.
+La ampliación requeriría autorización independiente y pruebas de regresión de ambos métodos. No se incorporan ahora dependencias, credenciales, rutas, estados, migraciones ni cambios de interfaz para un proveedor externo.
