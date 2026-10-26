@@ -1,6 +1,11 @@
 // Notifications of the signed-in customer: 20 per page, newest first, optionally only the
 // unread ones. Titles and messages come from notification-service and are rendered as
 // text by React (never as HTML).
+//
+// While the list is shown it is read again every 60 s (only with the tab visible) and when
+// the tab becomes visible again. These background reads keep the current list on screen
+// (no spinner), never overlap, are cancelled when the page, the filter or the component
+// changes, and an answer is dropped if a notification was marked as read meanwhile.
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listNotifications, markNotificationRead } from '../api/notifications';
@@ -16,6 +21,7 @@ import { useNotifications } from '../notifications/NotificationsContext';
 import { formatDateTime } from '../utils/format';
 
 export const NOTIFICATIONS_PAGE_SIZE = 20;
+export const NOTIFICATIONS_POLL_MS = 60_000;
 
 type Result =
   | { status: 'loading' }
@@ -37,6 +43,8 @@ export function NotificationsPage() {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<Result>({ status: 'loading' });
   const { refresh } = useNotifications();
+  /** Grows with every local change of the list; a background answer older than it is dropped */
+  const version = useRef(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,13 +59,45 @@ export function NotificationsPage() {
     return () => controller.abort();
   }, [page, unreadOnly, attempt]);
 
+  // Background refresh of the list that is already shown (not while loading or in error)
+  const ready = result.status === 'ready';
+  useEffect(() => {
+    if (!ready) return undefined;
+    let running: AbortController | null = null;
+    const update = () => {
+      if (document.visibilityState !== 'visible' || running) return; // one read at a time
+      const controller = new AbortController();
+      running = controller;
+      const startedAt = version.current;
+      listNotifications(page, NOTIFICATIONS_PAGE_SIZE, unreadOnly, controller.signal)
+        .then((data) => {
+          if (!controller.signal.aborted && version.current === startedAt) setResult({ status: 'ready', page: data });
+        })
+        .catch(() => {
+          // A failed background read keeps the list on screen; the next one tries again
+        })
+        .finally(() => {
+          if (running === controller) running = null;
+        });
+    };
+    const timer = setInterval(update, NOTIFICATIONS_POLL_MS);
+    document.addEventListener('visibilitychange', update);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', update);
+      running?.abort();
+    };
+  }, [ready, page, unreadOnly, attempt]);
+
   /** The marked notification is replaced in place by the answer of the service */
-  const replace = (updated: NotificationOut) =>
+  const replace = (updated: NotificationOut) => {
+    version.current += 1;
     setResult((r) =>
       r.status === 'ready'
         ? { ...r, page: { ...r.page, items: r.page.items.map((n) => (n.id === updated.id ? updated : n)) } }
         : r,
     );
+  };
 
   return (
     <section className="notifications">

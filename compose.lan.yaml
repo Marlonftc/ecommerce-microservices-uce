@@ -1,0 +1,21 @@
+# Optional LAN demo mode: lets phones on the same private network open the shop.
+# Adds ONE extra publication of the gateway on the laptop's private IPv4 address and
+# keeps the usual 127.0.0.1 one. No other service gains a port.
+#
+# The address is taken from the shell, never from .env:
+#   $env:LAN_BIND_IP = '192.168.1.50'
+#
+# Apply it with the same files the stack is already running with, touching only the
+# gateway (no other container, PostgreSQL included, is recreated):
+#   docker compose -f compose.yaml -f compose.override.example.yaml -f compose.lan.yaml up -d --no-deps gateway
+# Back to normal (localhost only):
+#   docker compose -f compose.yaml -f compose.override.example.yaml up -d --no-deps gateway
+#
+# HTTP without TLS and simulated payments: private networks and demo accounts only.
+services:
+  gateway:
+    # !override replaces the list from compose.yaml instead of merging it, so the
+    # 127.0.0.1 entry is not published twice (Compose >= 2.24.4)
+    ports: !override
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:80"
+      - "${LAN_BIND_IP:?Set LAN_BIND_IP to this laptop's private IPv4 address}:${GATEWAY_PORT:-8080}:80"
