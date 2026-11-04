@@ -13,11 +13,11 @@ Decisiones aprobadas antes de iniciar la implementación (Fase 4). D19 y siguien
 | D07 | Tabla `pending_operations` con reconciliación persistente (outbox simplificado) | Las operaciones pendientes sobreviven a reinicios |
 | D08 | Idempotencia obligatoria en creación y pago de pedidos | Evitar efectos de negocio duplicados ante reintentos |
 | D09 | Inventario sin temporizadores; expiración controlada por order-service | Evitar liberar stock de un pedido con pago en curso |
-| D10 | Carrito bloqueado durante el checkout | Evitar inconsistencias entre carrito y pedido (ver limitación en README) |
+| D10 | Carrito bloqueado durante el checkout | Evitar inconsistencias entre carrito y pedido (ver «Alcance y decisiones de diseño» en el README) |
 | D11 | JWT RS256 con clave privada solo en user-service; duración de 30 minutos, sin revocación en esta versión | Los demás servicios verifican pero no pueden emitir tokens. Un token emitido sigue siendo válido hasta expirar aunque el usuario se desactive o cambie de rol (ver detalle abajo) |
 | D12 | Jobs de migración de un solo uso por servicio | Migración controlada y única antes de escalar |
 | D13 | Healthcheck sobre `/health/ready` + `restart: always` | El healthcheck informa; la política de reinicio recupera el proceso |
-| D14 | Escalado de product-service con `--scale` y resolución DNS dinámica en Nginx | Servicio de mayor demanda esperada (hipótesis) |
+| D14 | Escalado de product-service con `--scale` y resolución DNS dinámica en Nginx | Servicio de mayor demanda: 54,2 % de las solicitudes públicas en la carga mixta ([09-carga.md](../testing/09-carga.md), escenario 3) |
 | D15 | Sin broker de mensajes ni circuit breaker inicial | Proporcionalidad al alcance del examen |
 | D16 | Productos e inventario se relacionan por `product_id`, sin claves foráneas entre bases | Cada servicio es dueño de sus datos. Los productos iniciales usan ids conocidos con datos semilla idempotentes, y el inventario admite existencias de cualquier producto creado después |
 | D17 | `/internal` se protege en el gateway y también en cada microservicio (defensa en profundidad) | El gateway publica solo una lista de rutas y responde 404 a todo lo demás, incluidas variantes codificadas o con `..`, y elimina `X-Internal-Key` recibida del exterior. Cada servicio sigue exigiendo la clave interna: si el gateway fallara o alguien llegara a la red interna, la segunda barrera sigue activa |
