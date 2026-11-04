@@ -241,7 +241,7 @@ calentamiento):
 Inferido a partir de estos datos: en un monolito habría que replicar la aplicación completa (usuarios, pedidos,
 pagos, notificaciones…) para ganar capacidad en el catálogo; aquí se replicó solo product-service
 (~95 MiB por réplica) con `docker compose up -d --scale product-service=3`, sin tocar el resto ni
-reiniciar el gateway. El análisis completo se desarrollará en la documentación de arquitectura.
+reiniciar el gateway. El análisis completo está en el informe del proyecto (secciones 4.4 y 5).
 
 ## Limitaciones
 
